@@ -24,6 +24,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
     Route::get('/profile', [AdminController::class, 'profile'])->name('profile');
+    
+    // Brand Management
+    Route::resource('brands', \App\Http\Controllers\Admin\BrandController::class)->except(['show']);
+    Route::get('brands/{brand}', [\App\Http\Controllers\Admin\BrandController::class, 'show'])->name('brands.show');
+    
+    // Product Management
+    Route::resource('products', \App\Http\Controllers\Admin\ProductController::class);
+    Route::post('products/{product}/media', [\App\Http\Controllers\Admin\ProductController::class, 'storeMedia'])->name('products.media.store');
+    Route::delete('products/{product}/media/{media}', [\App\Http\Controllers\Admin\ProductController::class, 'destroyMedia'])->name('products.media.destroy');
 });
 
 // Regular user routes
