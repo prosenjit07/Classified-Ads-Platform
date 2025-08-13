@@ -221,12 +221,13 @@
                 <h3 class="text-lg font-medium text-gray-900 mb-4">Description</h3>
                 <div>
                   <InputLabel for="description" value="Product Description" />
-                  <RichTextEditor
+                  <textarea
                     id="description"
                     v-model="form.description"
-                    class="mt-1"
+                    rows="6"
+                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     :class="{ 'border-red-500': form.errors.description }"
-                  />
+                  ></textarea>
                   <InputError :message="form.errors.description" class="mt-2" />
                 </div>
               </div>
@@ -354,16 +355,13 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue';
+import { ref } from 'vue';
 import { useForm, Link, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import InputError from '@/Components/InputError.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import PrimaryButton from '@/Components/PrimaryButton.vue';
 import TextInput from '@/Components/TextInput.vue';
-import Textarea from '@/Components/Textarea.vue';
-import RichTextEditor from '@/Components/RichTextEditor.vue';
-import { useToast } from '@/Composables/useToast';
 
 const props = defineProps({
   categories: {
@@ -388,8 +386,6 @@ const props = defineProps({
   },
 });
 
-const { showSuccess, showError } = useToast();
-
 const form = useForm({
   name: '',
   sku: '',
@@ -410,28 +406,6 @@ const form = useForm({
   attributes: {},
 });
 
-// Watch for category changes to load attributes
-watch(() => form.category_id, async (newCategoryId) => {
-  if (newCategoryId) {
-    try {
-      const response = await fetch(route('admin.categories.attributes', newCategoryId));
-      if (response.ok) {
-        const data = await response.json();
-        // Initialize empty values for attributes
-        const attributes = {};
-        data.attributes.forEach(attr => {
-          attributes[attr.id] = '';
-        });
-        form.attributes = attributes;
-      }
-    } catch (error) {
-      console.error('Error loading category attributes:', error);
-    }
-  } else {
-    form.attributes = {};
-  }
-});
-
 const handleImageUpload = (event) => {
   const files = event.target.files;
   if (!files.length) return;
@@ -441,7 +415,7 @@ const handleImageUpload = (event) => {
   
   newImages.forEach(file => {
     if (file.size > 2 * 1024 * 1024) { // 2MB limit
-      showError('Image size should be less than 2MB');
+      alert('Image size should be less than 2MB');
       return;
     }
     
@@ -477,8 +451,8 @@ const submit = () => {
   });
   
   // Append images
-  form.images.forEach((image, index) => {
-    formData.append(`images[${index}]`, image.file);
+  form.images.forEach((image) => {
+    formData.append('images[]', image.file);
   });
   
   // Append attributes
@@ -486,14 +460,12 @@ const submit = () => {
     formData.append('attributes', JSON.stringify(form.attributes));
   }
   
-  // Submit the form
-  form.post(route('admin.products.store'), {
+  // Submit the form using router with our FormData
+  router.post(route('admin.products.store'), formData, {
     forceFormData: true,
-    onSuccess: () => {
-      showSuccess('Product created successfully');
-    },
+    onSuccess: () => {},
     onError: (errors) => {
-      showError('There was an error creating the product');
+      console.error('Error creating product', errors);
     },
   });
 };

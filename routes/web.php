@@ -91,9 +91,8 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
         ->name('brands.update');
     
     // Products Resource Routes with Media
-    Route::resource('products', 'App\Http\Controllers\Admin\ProductController');
-    Route::post('products/{product}/media', [\App\Http\Controllers\Admin\ProductController::class, 'storeMedia'])
-        ->name('products.media.store');
+    Route::resource('products', 'App\\Http\\Controllers\\Admin\\ProductController');
+    // Delete a single media item
     Route::delete('products/{product}/media/{media}', [\App\Http\Controllers\Admin\ProductController::class, 'destroyMedia'])
         ->name('products.media.destroy');
 });

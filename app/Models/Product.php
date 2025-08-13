@@ -135,19 +135,22 @@ class Product extends Model implements HasMedia
         'name',
         'slug',
         'description',
+        'short_description',
         'price',
         'sale_price',
         'sku',
-        'quantity',
-        'in_stock',
+        'stock_quantity',
+        'manage_stock',
+        'stock_status',
         'is_active',
         'is_featured',
+        'order',
         'condition',
         'meta_title',
         'meta_description',
         'meta_keywords',
         'status',
-        'fields', // For storing dynamic field values
+        'published_at',
     ];
 
     /**
@@ -158,13 +161,13 @@ class Product extends Model implements HasMedia
     protected $casts = [
         'price' => 'decimal:2',
         'sale_price' => 'decimal:2',
-        'quantity' => 'integer',
-        'in_stock' => 'boolean',
+        'stock_quantity' => 'integer',
+        'manage_stock' => 'boolean',
         'is_active' => 'boolean',
         'is_featured' => 'boolean',
         'views' => 'integer',
         'status' => 'string',
-        'fields' => 'array',
+        'published_at' => 'datetime',
     ];
     
     /**
@@ -440,6 +443,9 @@ class Product extends Model implements HasMedia
         })
         ->when($filters['brand_id'] ?? false, function ($query, $brandId) {
             $query->where('brand_id', $brandId);
+        })
+        ->when($filters['status'] ?? false, function ($query, $status) {
+            $query->where('status', $status);
         })
         ->when($filters['min_price'] ?? false, function ($query, $minPrice) {
             $query->where('price', '>=', $minPrice);

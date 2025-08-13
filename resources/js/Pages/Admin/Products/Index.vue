@@ -132,11 +132,11 @@
                   <td class="px-6 py-4 whitespace-nowrap">
                     <div class="text-sm text-gray-900">
                       <template v-if="product.sale_price">
-                        <span class="text-red-600 font-medium">${{ (product.sale_price / 100).toFixed(2) }}</span>
-                        <span class="text-gray-500 text-xs line-through ml-1">${{ (product.price / 100).toFixed(2) }}</span>
+                        <span class="text-red-600 font-medium">${{ Number(product.sale_price).toFixed(2) }}</span>
+                        <span class="text-gray-500 text-xs line-through ml-1">${{ Number(product.price).toFixed(2) }}</span>
                       </template>
                       <template v-else>
-                        ${{ (product.price / 100).toFixed(2) }}
+                        ${{ Number(product.price).toFixed(2) }}
                       </template>
                     </div>
                   </td>

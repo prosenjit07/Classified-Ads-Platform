@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
- use App\Http\Controllers\Controller;
- use App\Http\Requests\Admin\StoreProductRequest;
- use App\Http\Requests\Admin\UpdateProductRequest;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreProductRequest;
+use App\Http\Requests\Admin\UpdateProductRequest;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
@@ -75,6 +75,15 @@ class ProductController extends Controller
     {
         $validated = $request->validated();
         
+        // Normalize fields to match DB schema
+        if (isset($validated['quantity'])) {
+            $validated['stock_quantity'] = (int) $validated['quantity'];
+            unset($validated['quantity']);
+        }
+        if (empty($validated['slug']) && !empty($validated['name'])) {
+            $validated['slug'] = Str::slug($validated['name']);
+        }
+        
         // Handle the file uploads first
         $images = [];
         if ($request->hasFile('images')) {
@@ -93,13 +102,26 @@ class ProductController extends Controller
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $image) {
                     $product->addMedia($image)
-                        ->toMediaCollection('products');
+                        ->toMediaCollection('images');
                 }
             }
             
-            // Save dynamic fields if any
-            if (isset($validated['fields'])) {
-                $product->saveDynamicFields($validated['fields']);
+            // Save dynamic attributes if provided (simple key/value)
+            if ($request->has('attributes')) {
+                $attributes = $request->input('attributes');
+                if (is_string($attributes)) {
+                    $attributes = json_decode($attributes, true);
+                }
+                if (is_array($attributes)) {
+                    foreach ($attributes as $name => $value) {
+                        $product->details()->create([
+                            'attribute_name' => (string) $name,
+                            'attribute_value' => is_array($value) ? json_encode($value) : (string) $value,
+                            'attribute_type' => 'text',
+                            'order' => 0,
+                        ]);
+                    }
+                }
             }
             
             DB::commit();
@@ -125,8 +147,10 @@ class ProductController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(Product $product)
+    public function show($idOrSlug)
     {
+        $product = $this->resolveProduct($idOrSlug);
+        
         $product->load([
             'category:id,name',
             'brand:id,name',
@@ -155,14 +179,15 @@ class ProductController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Product $product)
+    public function edit($idOrSlug)
     {
-        $product->load('details');
+        $product = $this->resolveProduct($idOrSlug);
+        $product->load(['details', 'media']);
         
         return Inertia::render('Admin/Products/Edit', [
             'product' => array_merge($product->toArray(), [
-                'price' => $product->price / 100, // Convert from cents
-                'sale_price' => $product->sale_price ? $product->sale_price / 100 : null,
+                'price' => $product->price,
+                'sale_price' => $product->sale_price,
             ]),
             'categories' => Category::active()->get(['id', 'name']),
             'brands' => Brand::active()->get(['id', 'name']),
@@ -202,9 +227,19 @@ class ProductController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateProductRequest $request, Product $product)
+    public function update(UpdateProductRequest $request, $idOrSlug)
     {
+        $product = $this->resolveProduct($idOrSlug);
         $validated = $request->validated();
+        
+        // Normalize fields to match DB schema
+        if (isset($validated['quantity'])) {
+            $validated['stock_quantity'] = (int) $validated['quantity'];
+            unset($validated['quantity']);
+        }
+        if (empty($validated['slug']) && !empty($validated['name'])) {
+            $validated['slug'] = $product->slug;
+        }
         
         // Handle the file uploads
         $images = [];
@@ -224,37 +259,37 @@ class ProductController extends Controller
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $image) {
                     $product->addMedia($image)
-                        ->toMediaCollection('products');
+                        ->toMediaCollection('images');
                 }
             }
             
-            // Save dynamic fields if any
-            if (isset($validated['fields'])) {
-                $product->saveDynamicFields($validated['fields']);
-            }
-            
-            // Handle dynamic attributes if any
-            if (isset($validated['attributes'])) {
-                foreach ($validated['attributes'] as $attribute) {
-                    if (isset($attribute['id'])) {
-                        // Update existing attribute
-                        $product->details()->where('id', $attribute['id'])->update([
-                            'attribute_name' => $attribute['attribute_name'],
-                            'attribute_value' => $attribute['attribute_value'],
-                            'attribute_type' => $attribute['attribute_type'],
-                            'order' => $attribute['order'] ?? 0,
-                        ]);
-                    } else {
-                        // Create new attribute
-                        $product->details()->create([
-                            'attribute_name' => $attribute['attribute_name'],
-                            'attribute_value' => $attribute['attribute_value'],
-                            'attribute_type' => $attribute['attribute_type'],
-                            'order' => $attribute['order'] ?? 0,
-                        ]);
+            // Save dynamic attributes if provided
+            if ($request->has('attributes')) {
+                $attributes = $request->input('attributes');
+                if (is_array($attributes)) {
+                    foreach ($attributes as $attribute) {
+                        if (isset($attribute['id'])) {
+                            // Update existing attribute
+                            $product->details()->where('id', $attribute['id'])->update([
+                                'attribute_name' => $attribute['attribute_name'] ?? '',
+                                'attribute_value' => $attribute['attribute_value'] ?? '',
+                                'attribute_type' => $attribute['attribute_type'] ?? 'text',
+                                'order' => $attribute['order'] ?? 0,
+                            ]);
+                        } else {
+                            // Create new attribute
+                            $product->details()->create([
+                                'attribute_name' => $attribute['attribute_name'] ?? '',
+                                'attribute_value' => $attribute['attribute_value'] ?? '',
+                                'attribute_type' => $attribute['attribute_type'] ?? 'text',
+                                'order' => $attribute['order'] ?? 0,
+                            ]);
+                        }
                     }
                 }
             }
+            
+            // Dynamic attributes are handled above from request->input('attributes')
             
             DB::commit();
             
@@ -279,8 +314,10 @@ class ProductController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(Product $product)
+    public function destroy($idOrSlug)
     {
+        $product = $this->resolveProduct($idOrSlug);
+        
         try {
             DB::beginTransaction();
             
@@ -303,5 +340,30 @@ class ProductController extends Controller
             
             return back()->with('error', 'Error deleting product: ' . $e->getMessage());
         }
+    }
+    
+    /**
+     * Resolve the product using either ID or slug.
+     */
+    protected function resolveProduct($idOrSlug)
+    {
+        if (is_numeric($idOrSlug)) {
+            return Product::findOrFail($idOrSlug);
+        }
+        return Product::where('slug', $idOrSlug)->firstOrFail();
+    }
+
+    /**
+     * Delete a single media item for a product
+     */
+    public function destroyMedia($idOrSlug, $mediaId)
+    {
+        $product = $this->resolveProduct($idOrSlug);
+        $media = $product->media()->where('id', $mediaId)->first();
+        if (!$media) {
+            return back()->with('error', 'Media not found.');
+        }
+        $media->delete();
+        return back()->with('success', 'Image deleted successfully.');
     }
 }

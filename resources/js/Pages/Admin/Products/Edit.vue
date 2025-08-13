@@ -210,25 +210,25 @@
                 <h3 class="text-lg font-medium text-gray-900 mb-4">Description</h3>
                 <div>
                   <InputLabel for="short_description" value="Short Description" />
-                  <TextArea
+                  <textarea
                     id="short_description"
                     v-model="form.short_description"
                     rows="3"
-                    class="mt-1 block w-full"
+                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     :class="{ 'border-red-500': form.errors.short_description }"
-                  />
+                  ></textarea>
                   <InputError :message="form.errors.short_description" class="mt-2" />
                 </div>
 
                 <div class="mt-4">
                   <InputLabel for="description" value="Description" />
-                  <TextArea
+                  <textarea
                     id="description"
                     v-model="form.description"
                     rows="5"
-                    class="mt-1 block w-full"
+                    class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                     :class="{ 'border-red-500': form.errors.description }"
-                  />
+                  ></textarea>
                   <InputError :message="form.errors.description" class="mt-2" />
                 </div>
               </div>
@@ -295,7 +295,7 @@
                       v-model="form.attributes[attribute.id]"
                       type="text"
                       class="mt-1 block w-full"
-                      :class="{ 'border-red-500': form.errors[`attributes.${attribute.id}`] }"
+                      :class="{ 'border-red-500': form.errors['attributes.' + attribute.id] }"
                     />
                     
                     <!-- Number Input -->
@@ -305,7 +305,7 @@
                       v-model.number="form.attributes[attribute.id]"
                       type="number"
                       class="mt-1 block w-full"
-                      :class="{ 'border-red-500': form.errors[`attributes.${attribute.id}`] }"
+                      :class="{ 'border-red-500': form.errors['attributes.' + attribute.id] }"
                     />
                     
                     <!-- Select Dropdown -->
@@ -314,7 +314,7 @@
                       :id="'attribute_' + attribute.id"
                       v-model="form.attributes[attribute.id]"
                       class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
-                      :class="{ 'border-red-500': form.errors[`attributes.${attribute.id}`] }"
+                       :class="{ 'border-red-500': form.errors['attributes.' + attribute.id] }"
                     >
                       <option value="">Select {{ attribute.name }}</option>
                       <option v-for="option in attribute.options" :key="option" :value="option">
@@ -335,7 +335,7 @@
                       </label>
                     </div>
                     
-                    <InputError :message="form.errors[`attributes.${attribute.id}`]" class="mt-2" />
+                    <InputError :message="form.errors['attributes.' + attribute.id]" class="mt-2" />
                   </div>
                 </div>
               </div>
@@ -358,13 +358,13 @@
                   
                   <div class="col-span-2">
                     <InputLabel for="meta_description" value="Meta Description" />
-                    <TextArea
+                     <textarea
                       id="meta_description"
                       v-model="form.meta_description"
                       rows="3"
-                      class="mt-1 block w-full"
+                       class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                       :class="{ 'border-red-500': form.errors.meta_description }"
-                    />
+                     ></textarea>
                     <InputError :message="form.errors.meta_description" class="mt-2" />
                   </div>
                   
@@ -421,9 +421,7 @@ import { useForm, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import InputLabel from '@/Components/InputLabel.vue';
 import TextInput from '@/Components/TextInput.vue';
-import TextArea from '@/Components/TextArea.vue';
 import InputError from '@/Components/InputError.vue';
-import { useToast } from '@/Composables/useToast';
 
 const props = defineProps({
   product: {
@@ -444,16 +442,14 @@ const props = defineProps({
   },
 });
 
-const { showSuccess, showError } = useToast();
-
 const form = useForm({
   name: props.product.name,
   sku: props.product.sku,
   category_id: props.product.category_id,
   brand_id: props.product.brand_id,
-  price: (props.product.price / 100).toFixed(2),
-  sale_price: props.product.sale_price ? (props.product.sale_price / 100).toFixed(2) : '',
-  quantity: props.product.quantity,
+  price: (Number(props.product.price)).toFixed(2),
+  sale_price: props.product.sale_price ? (Number(props.product.sale_price)).toFixed(2) : '',
+  quantity: props.product.stock_quantity ?? props.product.quantity ?? 0,
   weight: props.product.weight,
   short_description: props.product.short_description,
   description: props.product.description,
@@ -481,47 +477,40 @@ const removeImage = (mediaId) => {
     router.delete(route('admin.products.media.destroy', [props.product.id, mediaId]), {
       preserveScroll: true,
       onSuccess: () => {
-        showSuccess('Image deleted successfully');
+        // Simple feedback
+        alert('Image deleted successfully');
       },
       onError: () => {
-        showError('Failed to delete image');
+        alert('Failed to delete image');
       },
     });
   }
 };
 
 const submit = () => {
-  // Convert price and sale_price to cents before submitting
+  // Build multipart form data
   const formData = new FormData();
-  
-  // Append all form data
-  Object.keys(form).forEach(key => {
-    if (key === 'price' || key === 'sale_price') {
-      formData.append(key, form[key] ? Math.round(parseFloat(form[key]) * 100) : null);
-    } else if (key === 'images') {
-      // Handle file uploads
-      Array.from(form.images).forEach((file, index) => {
-        formData.append(`images[${index}]`, file);
-      });
-    } else if (key === 'attributes') {
-      // Handle attributes
-      Object.keys(form.attributes).forEach(attrId => {
-        formData.append(`attributes[${attrId}]`, form.attributes[attrId] || '');
-      });
-    } else if (key !== 'processing' && key !== 'errors' && key !== 'reset' && key !== 'clearErrors' && key !== 'setError' && key !== 'cancel') {
-      formData.append(key, form[key]);
+  const data = form.data();
+  Object.keys(data).forEach((key) => {
+    if (key !== 'images' && key !== 'attributes') {
+      const value = data[key];
+      if (value !== null && value !== undefined) {
+        formData.append(key, value);
+      }
     }
   });
+  // Append files
+  Array.from(form.images).forEach((file) => {
+    formData.append('images[]', file);
+  });
+  // Append attributes
+  Object.keys(form.attributes).forEach((attrId) => {
+    formData.append(`attributes[${attrId}]`, form.attributes[attrId] || '');
+  });
 
-  form.post(route('admin.products.update', props.product.id), {
+  router.post(route('admin.products.update', props.product.slug || props.product.id), formData, {
     preserveScroll: true,
     forceFormData: true,
-    onSuccess: () => {
-      showSuccess('Product updated successfully');
-    },
-    onError: () => {
-      showError('Failed to update product. Please check the form for errors.');
-    },
   });
 };
 </script>
