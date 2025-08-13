@@ -7,12 +7,14 @@ use App\Models\User;
 use Illuminate\Auth\Events\Registered;
  use Illuminate\Http\RedirectResponse;
  use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
+ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rules;
 use Inertia\Inertia;
 use Inertia\Response;
  use App\Http\Requests\Auth\RegisterRequest;
+ use Illuminate\Support\Facades\Mail;
+ use App\Mail\WelcomeMail;
 
 class RegisteredUserController extends Controller
 {
@@ -40,6 +42,13 @@ class RegisteredUserController extends Controller
         ]);
 
         event(new Registered($user));
+
+        // Send welcome email
+        try {
+            Mail::to($user->email)->send(new WelcomeMail($user));
+        } catch (\Throwable $e) {
+            // Fail silently to not block registration
+        }
 
         Auth::login($user);
 
