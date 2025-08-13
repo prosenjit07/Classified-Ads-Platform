@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
+ use App\Http\Controllers\Controller;
+ use App\Http\Requests\Admin\StoreProductRequest;
+ use App\Http\Requests\Admin\UpdateProductRequest;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
@@ -64,24 +66,25 @@ class ProductController extends Controller
     }
 
     /**
-     * Store a newly created resource in storage.
+     * Get validation rules for the product.
+     *
+     * @param  \App\Models\Category|null  $category
+     * @return array
      */
-    public function store(Request $request)
+    protected function getValidationRules(Category $category = null): array
     {
-        $validated = $request->validate([
+        $rules = [
             // Basic Information
             'name' => 'required|string|max:255',
             'slug' => 'required|string|max:255|unique:products,slug',
             'description' => 'nullable|string',
-            'short_description' => 'nullable|string|max:500',
             'price' => 'required|numeric|min:0',
             'sale_price' => 'nullable|numeric|min:0|lt:price',
             'sku' => 'nullable|string|max:100|unique:products,sku',
             
             // Inventory
-            'stock_quantity' => 'required_if:manage_stock,true|integer|min:0|nullable',
-            'manage_stock' => 'boolean',
-            'stock_status' => 'required|in:in_stock,out_of_stock,on_backorder',
+            'quantity' => 'required|integer|min:0',
+            'in_stock' => 'boolean',
             'condition' => 'required|in:new,used,refurbished',
             
             // Categorization
@@ -91,71 +94,61 @@ class ProductController extends Controller
             // Status & Visibility
             'is_active' => 'boolean',
             'is_featured' => 'boolean',
-            'order' => 'nullable|integer|min:0',
+            'status' => 'required|in:active,inactive,draft',
             
             // SEO
             'meta_title' => 'nullable|string|max:255',
             'meta_description' => 'nullable|string|max:500',
+            'meta_keywords' => 'nullable|string|max:255',
             
             // Images
             'images' => 'nullable|array',
-            'images.*' => 'image|max:5120', // 5MB max per image
+            'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
             
-            // Dynamic attributes
-            'attributes' => 'nullable|array',
-            'attributes.*.attribute_name' => 'required|string|max:100',
-            'attributes.*.attribute_value' => 'required|string',
-            'attributes.*.attribute_type' => 'required|in:text,number,boolean,date,url',
-            'attributes.*.order' => 'nullable|integer|min:0',
-        ]);
+            // Dynamic fields (will be merged with category fields)
+            'fields' => 'nullable|array',
+        ];
+        
+        // Add dynamic field validation rules if category is provided
+        if ($category) {
+            $rules = array_merge($rules, $category->getFieldValidationRules());
+        }
+        
+        return $rules;
+    }
+    
+    /**
+     * Store a newly created resource in storage.
+     */
+    public function store(StoreProductRequest $request)
+    {
+        $validated = $request->validated();
+        
+        // Handle the file uploads first
+        $images = [];
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $image) {
+                $images[] = $image->store('products', 'public');
+            }
+        }
+        
+        DB::beginTransaction();
         
         try {
-            DB::beginTransaction();
+            // Create the product with the validated data
+            $product = Product::create($validated);
             
-            // Create the product
-            $product = Product::create([
-                'name' => $validated['name'],
-                'slug' => $validated['slug'],
-                'description' => $validated['description'] ?? null,
-                'short_description' => $validated['short_description'] ?? null,
-                'price' => $validated['price'] * 100, // Store in cents
-                'sale_price' => isset($validated['sale_price']) ? $validated['sale_price'] * 100 : null,
-                'sku' => $validated['sku'] ?? null,
-                'stock_quantity' => $validated['stock_quantity'] ?? 0,
-                'manage_stock' => $validated['manage_stock'] ?? false,
-                'stock_status' => $validated['stock_status'],
-                'condition' => $validated['condition'],
-                'category_id' => $validated['category_id'],
-                'brand_id' => $validated['brand_id'] ?? null,
-                'is_active' => $validated['is_active'] ?? true,
-                'is_featured' => $validated['is_featured'] ?? false,
-                'order' => $validated['order'] ?? 0,
-                'meta_title' => $validated['meta_title'] ?? null,
-                'meta_description' => $validated['meta_description'] ?? null,
-            ]);
-            
-            // Handle image uploads
+            // Handle image uploads if any
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $image) {
                     $product->addMedia($image)
-                        ->toMediaCollection('images');
+                        ->toMediaCollection('products');
                 }
             }
             
-            // Save dynamic attributes
-            if (!empty($validated['attributes'])) {
-                $attributes = collect($validated['attributes'])->map(function ($attr) {
-                    return [
-                        'attribute_name' => $attr['attribute_name'],
-                        'attribute_value' => $attr['attribute_value'],
-                        'attribute_type' => $attr['attribute_type'],
-                        'order' => $attr['order'] ?? 0,
-                        'created_at' => now(),
-                        'updated_at' => now(),
-                    ];
-                })->toArray();
-                
-                $product->details()->createMany($attributes);
+            // Save dynamic fields if any
+            if (isset($validated['fields'])) {
+                $product->saveDynamicFields($validated['fields']);
             }
             
             DB::commit();
@@ -167,12 +160,13 @@ class ProductController extends Controller
             DB::rollBack();
             
             // Delete any uploaded images if there was an error
-            if (isset($product) && $product->exists) {
-                $product->media()->delete();
-                $product->forceDelete();
+            if (!empty($images)) {
+                foreach ($images as $image) {
+                    Storage::disk('public')->delete($image);
+                }
             }
             
-            return back()->with('error', 'Error creating product: ' . $e->getMessage())
+            return back()->with('error', 'Failed to create product: ' . $e->getMessage())
                 ->withInput();
         }
     }
@@ -257,99 +251,39 @@ class ProductController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Product $product)
+    public function update(UpdateProductRequest $request, Product $product)
     {
-        $validated = $request->validate([
-            // Basic Information
-            'name' => 'required|string|max:255',
-            'slug' => 'required|string|max:255|unique:products,slug,' . $product->id,
-            'description' => 'nullable|string',
-            'short_description' => 'nullable|string|max:500',
-            'price' => 'required|numeric|min:0',
-            'sale_price' => 'nullable|numeric|min:0|lt:price',
-            'sku' => 'nullable|string|max:100|unique:products,sku,' . $product->id,
-            
-            // Inventory
-            'stock_quantity' => 'required_if:manage_stock,true|integer|min:0|nullable',
-            'manage_stock' => 'boolean',
-            'stock_status' => 'required|in:in_stock,out_of_stock,on_backorder',
-            'condition' => 'required|in:new,used,refurbished',
-            
-            // Categorization
-            'category_id' => 'required|exists:categories,id',
-            'brand_id' => 'nullable|exists:brands,id',
-            
-            // Status & Visibility
-            'is_active' => 'boolean',
-            'is_featured' => 'boolean',
-            'order' => 'nullable|integer|min:0',
-            
-            // SEO
-            'meta_title' => 'nullable|string|max:255',
-            'meta_description' => 'nullable|string|max:500',
-            
-            // Images
-            'images' => 'nullable|array',
-            'images.*' => 'image|max:5120', // 5MB max per image
-            'deleted_media_ids' => 'nullable|array',
-            'deleted_media_ids.*' => 'exists:media,id',
-            
-            // Dynamic attributes
-            'attributes' => 'nullable|array',
-            'attributes.*.id' => 'nullable|exists:product_details,id',
-            'attributes.*.attribute_name' => 'required|string|max:100',
-            'attributes.*.attribute_value' => 'required|string',
-            'attributes.*.attribute_type' => 'required|in:text,number,boolean,date,url',
-            'attributes.*.order' => 'nullable|integer|min:0',
-            'deleted_attributes' => 'nullable|array',
-            'deleted_attributes.*' => 'exists:product_details,id',
-        ]);
+        $validated = $request->validated();
+        
+        // Handle the file uploads
+        $images = [];
+        if ($request->hasFile('images')) {
+            foreach ($request->file('images') as $image) {
+                $images[] = $image->store('products', 'public');
+            }
+        }
+        
+        DB::beginTransaction();
         
         try {
-            DB::beginTransaction();
-            
             // Update the product
-            $product->update([
-                'name' => $validated['name'],
-                'slug' => $validated['slug'],
-                'description' => $validated['description'] ?? null,
-                'short_description' => $validated['short_description'] ?? null,
-                'price' => $validated['price'] * 100, // Store in cents
-                'sale_price' => isset($validated['sale_price']) ? $validated['sale_price'] * 100 : null,
-                'sku' => $validated['sku'] ?? null,
-                'stock_quantity' => $validated['stock_quantity'] ?? 0,
-                'manage_stock' => $validated['manage_stock'] ?? false,
-                'stock_status' => $validated['stock_status'],
-                'condition' => $validated['condition'],
-                'category_id' => $validated['category_id'],
-                'brand_id' => $validated['brand_id'] ?? null,
-                'is_active' => $validated['is_active'] ?? true,
-                'is_featured' => $validated['is_featured'] ?? false,
-                'order' => $validated['order'] ?? 0,
-                'meta_title' => $validated['meta_title'] ?? null,
-                'meta_description' => $validated['meta_description'] ?? null,
-            ]);
+            $product->update($validated);
             
-            // Handle image uploads
+            // Handle image uploads if any
             if ($request->hasFile('images')) {
                 foreach ($request->file('images') as $image) {
                     $product->addMedia($image)
-                        ->toMediaCollection('images');
+                        ->toMediaCollection('products');
                 }
             }
             
-            // Handle deleted images
-            if (!empty($validated['deleted_media_ids'])) {
-                $product->media()->whereIn('id', $validated['deleted_media_ids'])->delete();
+            // Save dynamic fields if any
+            if (isset($validated['fields'])) {
+                $product->saveDynamicFields($validated['fields']);
             }
             
-            // Handle dynamic attributes - delete removed ones first
-            if (!empty($validated['deleted_attributes'])) {
-                $product->details()->whereIn('id', $validated['deleted_attributes'])->delete();
-            }
-            
-            // Update or create attributes
-            if (!empty($validated['attributes'])) {
+            // Handle dynamic attributes if any
+            if (isset($validated['attributes'])) {
                 foreach ($validated['attributes'] as $attribute) {
                     if (isset($attribute['id'])) {
                         // Update existing attribute
@@ -378,6 +312,13 @@ class ProductController extends Controller
                 
         } catch (\Exception $e) {
             DB::rollBack();
+            
+            // Delete any uploaded images if there was an error
+            if (!empty($images)) {
+                foreach ($images as $image) {
+                    Storage::disk('public')->delete($image);
+                }
+            }
             
             return back()->with('error', 'Error updating product: ' . $e->getMessage())
                 ->withInput();

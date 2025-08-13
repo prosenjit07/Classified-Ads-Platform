@@ -12,6 +12,7 @@ use Spatie\MediaLibrary\HasMedia;
 use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 
 class Product extends Model implements HasMedia
 {
@@ -106,7 +107,6 @@ class Product extends Model implements HasMedia
     {
         return $query->where('status', self::STATUS_DRAFT);
     }
-    use SoftDeletes, InteractsWithMedia;
 
     /**
      * The attributes that are mass assignable.
@@ -114,24 +114,24 @@ class Product extends Model implements HasMedia
      * @var array<int, string>
      */
     protected $fillable = [
+        'category_id',
+        'brand_id',
         'name',
         'slug',
         'description',
-        'short_description',
         'price',
         'sale_price',
         'sku',
-        'stock_quantity',
-        'manage_stock',
-        'stock_status',
-        'condition',
-        'status',
+        'quantity',
+        'in_stock',
+        'is_active',
         'is_featured',
-        'order',
+        'condition',
         'meta_title',
         'meta_description',
-        'category_id',
-        'brand_id',
+        'meta_keywords',
+        'status',
+        'fields', // For storing dynamic field values
     ];
 
     /**
@@ -142,11 +142,13 @@ class Product extends Model implements HasMedia
     protected $casts = [
         'price' => 'decimal:2',
         'sale_price' => 'decimal:2',
-        'stock_quantity' => 'integer',
-        'manage_stock' => 'boolean',
+        'quantity' => 'integer',
+        'in_stock' => 'boolean',
+        'is_active' => 'boolean',
         'is_featured' => 'boolean',
-        'order' => 'integer',
-        'published_at' => 'datetime',
+        'views' => 'integer',
+        'status' => 'string',
+        'fields' => 'array',
     ];
     
     /**
@@ -154,7 +156,7 @@ class Product extends Model implements HasMedia
      *
      * @var array
      */
-    protected $appends = ['status_label'];
+    protected $appends = ['status_label', 'dynamic_fields'];
 
     /**
      * Get the route key for the model.
@@ -206,23 +208,104 @@ class Product extends Model implements HasMedia
     }
 
     /**
-     * Get the product details for the product.
+     * Get the product's details.
      */
     public function details(): HasMany
     {
-        return $this->hasMany(ProductDetail::class)->orderBy('order');
+        return $this->hasMany(ProductDetail::class);
+    }
+    
+    // duplicate saveDynamicFields implementation removed
+    
+    /**
+     * Get dynamic field values as key-value pairs.
+     *
+     * @return \Illuminate\Support\Collection
+     */
+    public function getDynamicFieldsAttribute()
+    {
+        return $this->details->pluck('attribute_value', 'attribute_name');
     }
     
     /**
+     * Get a specific dynamic field value.
+     *
+     * @param string $fieldName
+     * @return mixed
+     */
+    public function getDynamicField(string $fieldName)
+    {
+        $detail = $this->details->firstWhere('attribute_name', $fieldName);
+        return $detail?->attribute_value ?? null;
+    }
+    
+    /**
+     * Save dynamic field values for the product.
+     *
+     * @param array $fields
+     * @return void
+     */
+    public function saveDynamicFields(array $fields): void
+    {
+        if (empty($fields)) {
+            return;
+        }
+        
+        // Normalize input to a consistent structure and persist using ProductDetail columns
+        DB::transaction(function () use ($fields) {
+            foreach ($fields as $fieldData) {
+                if (is_array($fieldData) && (isset($fieldData['attribute_name']) || isset($fieldData['name']))) {
+                    $attributeName = $fieldData['attribute_name'] ?? $fieldData['name'] ?? null;
+                    $attributeValue = $fieldData['attribute_value'] ?? $fieldData['value'] ?? null;
+                    $attributeType = $fieldData['attribute_type'] ?? $fieldData['type'] ?? 'text';
+                    $detailId = $fieldData['id'] ?? null;
+                } elseif (is_array($fieldData)) {
+                    $attributeName = key($fieldData);
+                    $attributeValue = current($fieldData);
+                    $attributeType = 'text';
+                    $detailId = null;
+                } else {
+                    continue;
+                }
+
+                if (empty($attributeName)) {
+                    continue;
+                }
+
+                $this->details()->updateOrCreate(
+                    ['id' => $detailId],
+                    [
+                        'attribute_name' => (string) $attributeName,
+                        'attribute_value' => is_array($attributeValue) ? json_encode($attributeValue) : (string) $attributeValue,
+                        'attribute_type' => (string) $attributeType,
+                    ]
+                );
+            }
+        });
+    }
+    
+    /**
+     * Get validation rules for dynamic fields based on category.
+     *
+     * @return array
+     */
+    public function getDynamicFieldRules(): array
+    {
+        if (!$this->category) {
+            return [];
+        }
+        
+        return $this->category->getFieldValidationRules();
+    }
+
+    /**
      * Get the users who have this product in their wishlist.
      */
-    public function wishlistedBy(): BelongsToMany
+    public function wishlistUsers(): BelongsToMany
     {
         return $this->belongsToMany(User::class, 'wishlists')
-            ->withPivot(['notes', 'priority', 'created_at'])
-            ->withTimestamps()
-            ->orderBy('wishlists.priority', 'desc')
-            ->orderBy('wishlists.created_at', 'desc');
+            ->withPivot(['notes', 'priority'])
+            ->withTimestamps();
     }
     
     /**
@@ -270,7 +353,7 @@ class Product extends Model implements HasMedia
     /**
      * Register media conversions.
      */
-    public function registerMediaConversions(Media $media = null): void
+    public function registerMediaConversions(Media $media = null): void 
     {
         $this->addMediaConversion('thumb')
             ->width(300)

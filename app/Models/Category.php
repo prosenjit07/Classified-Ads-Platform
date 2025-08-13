@@ -47,6 +47,66 @@ class Category extends Model
     {
         return $this->belongsTo(Category::class, 'parent_id');
     }
+    
+    /**
+     * Get the fields for the category.
+     */
+    public function fields(): HasMany
+    {
+        return $this->hasMany(CategoryField::class)->orderBy('order');
+    }
+    
+    /**
+     * Get all ancestor categories including parent, grandparent, etc.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getAncestors()
+    {
+        $ancestors = collect();
+        $current = $this;
+        
+        while ($current->parent) {
+            $ancestors->push($current->parent);
+            $current = $current->parent;
+        }
+        
+        return $ancestors->reverse();
+    }
+    
+    /**
+     * Get all fields including those from parent categories.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getAllFields()
+    {
+        $fields = $this->fields;
+        
+        // Add fields from parent categories
+        $ancestors = $this->getAncestors();
+        foreach ($ancestors as $ancestor) {
+            $fields = $fields->merge($ancestor->fields);
+        }
+        
+        return $fields->unique('name');
+    }
+    
+    /**
+     * Get the validation rules for all fields in this category.
+     *
+     * @return array
+     */
+    public function getFieldValidationRules(): array
+    {
+        $rules = [];
+        
+        foreach ($this->getAllFields() as $field) {
+            $rules["fields.{$field->name}"] = $field->getValidationRules();
+        }
+        
+        return $rules;
+    }
 
     /**
      * Get the child categories.

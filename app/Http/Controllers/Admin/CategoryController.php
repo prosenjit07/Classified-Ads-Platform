@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
+ use App\Http\Controllers\Controller;
+ use App\Http\Requests\Admin\StoreCategoryRequest;
+ use App\Http\Requests\Admin\UpdateCategoryRequest;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -45,18 +47,9 @@ class CategoryController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(StoreCategoryRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'parent_id' => 'nullable|exists:categories,id',
-            'description' => 'nullable|string',
-            'status' => 'boolean',
-            'order' => 'integer|min:0',
-            'form_fields' => 'nullable|array',
-            'meta_title' => 'nullable|string|max:255',
-            'meta_description' => 'nullable|string',
-        ]);
+        $validated = $request->validated();
 
         // Generate slug from name if not provided
         $validated['slug'] = Str::slug($request->input('slug') ?: $request->name);
@@ -116,18 +109,9 @@ class CategoryController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Category $category)
+    public function update(UpdateCategoryRequest $request, Category $category)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255',
-            'parent_id' => 'nullable|exists:categories,id|not_in:' . $category->id,
-            'description' => 'nullable|string',
-            'status' => 'boolean',
-            'order' => 'integer|min:0',
-            'form_fields' => 'nullable|array',
-            'meta_title' => 'nullable|string|max:255',
-            'meta_description' => 'nullable|string',
-        ]);
+        $validated = $request->validated();
 
         // Generate slug from name if not provided
         $validated['slug'] = Str::slug($request->input('slug') ?: $request->name);

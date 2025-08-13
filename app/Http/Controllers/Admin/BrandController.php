@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers\Admin;
 
-use App\Http\Controllers\Controller;
+ use App\Http\Controllers\Controller;
+ use App\Http\Requests\Admin\StoreBrandRequest;
+ use App\Http\Requests\Admin\UpdateBrandRequest;
 use App\Models\Brand;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -37,18 +39,9 @@ class BrandController extends Controller
     /**
      * Store a newly created resource in storage.
      */
-    public function store(Request $request)
+    public function store(StoreBrandRequest $request)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:brands',
-            'description' => 'nullable|string',
-            'website' => 'nullable|url',
-            'is_active' => 'boolean',
-            'order' => 'nullable|integer|min:0',
-            'meta_title' => 'nullable|string|max:255',
-            'meta_description' => 'nullable|string|max:500',
-            'logo' => 'nullable|image|max:2048', // 2MB max
-        ]);
+        $validated = $request->validated();
 
         // Generate slug from name if not provided
         $validated['slug'] = Str::slug($validated['name']);
@@ -90,19 +83,9 @@ class BrandController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(Request $request, Brand $brand)
+    public function update(UpdateBrandRequest $request, Brand $brand)
     {
-        $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:brands,name,' . $brand->id,
-            'slug' => 'required|string|max:255|unique:brands,slug,' . $brand->id,
-            'description' => 'nullable|string',
-            'website' => 'nullable|url',
-            'is_active' => 'boolean',
-            'order' => 'nullable|integer|min:0',
-            'meta_title' => 'nullable|string|max:255',
-            'meta_description' => 'nullable|string|max:500',
-            'logo' => 'nullable|image|max:2048',
-        ]);
+        $validated = $request->validated();
 
         // Handle file upload
         if ($request->hasFile('logo')) {

@@ -23,6 +23,7 @@ class Brand extends Model
         'description',
         'website',
         'is_active',
+        'is_featured',
         'order',
         'meta_title',
         'meta_description',
@@ -46,6 +47,7 @@ class Brand extends Model
      */
     protected $casts = [
         'is_active' => 'boolean',
+        'is_featured' => 'boolean',
         'order' => 'integer',
     ];
 

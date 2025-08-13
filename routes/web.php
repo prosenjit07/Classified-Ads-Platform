@@ -8,10 +8,21 @@ use App\Models\Category;
 use App\Models\Product;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 
 // Public routes
 Route::get('/', function (Request $request) {
+    if (!Schema::hasTable('products') || !Schema::hasTable('categories') || !Schema::hasTable('brands')) {
+        return Inertia::render('Welcome', [
+            'canLogin' => Route::has('login'),
+            'canRegister' => Route::has('register'),
+            'products' => [],
+            'categories' => [],
+            'brands' => [],
+            'filters' => [],
+        ]);
+    }
     // Get filter parameters
     $filters = $request->only(['search', 'category', 'brand', 'min_price', 'max_price', 'condition', 'sort_by', 'per_page']);
     
@@ -90,14 +101,19 @@ Route::get('/dashboard', function () {
 
 // Admin routes
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
+    // Dashboard
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
-    Route::get('/settings', [AdminController::class, 'settings'])->name('settings');
-    Route::get('/profile', [AdminController::class, 'profile'])->name('profile');
     
-    // Brand Management
-    Route::resource('brands', \App\Http\Controllers\Admin\BrandController::class)->except(['show']);
-    Route::get('brands/{brand}', [\App\Http\Controllers\Admin\BrandController::class, 'show'])->name('brands.show');
+    // Resource routes
+    Route::resource('categories', 'App\Http\Controllers\Admin\CategoryController');
+    Route::resource('brands', 'App\Http\Controllers\Admin\BrandController');
+    Route::resource('products', 'App\Http\Controllers\Admin\ProductController');
     
+    // Additional routes for dynamic fields
+    Route::post('categories/{category}/fields', [\App\Http\Controllers\Admin\CategoryController::class, 'storeField'])
+        ->name('categories.fields.store');
+    Route::delete('categories/{category}/fields/{field}', [\App\Http\Controllers\Admin\CategoryController::class, 'destroyField'])
+        ->name('categories.fields.destroy');
     // Product Management
     Route::resource('products', \App\Http\Controllers\Admin\ProductController::class);
     Route::post('products/{product}/media', [\App\Http\Controllers\Admin\ProductController::class, 'storeMedia'])->name('products.media.store');
