@@ -85,6 +85,10 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // Brands Resource Routes
     Route::resource('brands', 'App\Http\Controllers\Admin\BrandController');
     
+    // Explicitly define the update route to work with both PUT and POST (for method spoofing)
+    Route::match(['put', 'post'], 'brands/{brand}', 'App\Http\Controllers\Admin\BrandController@update')
+        ->name('brands.update');
+    
     // Products Resource Routes with Media
     Route::resource('products', 'App\Http\Controllers\Admin\ProductController');
     Route::post('products/{product}/media', [\App\Http\Controllers\Admin\ProductController::class, 'storeMedia'])

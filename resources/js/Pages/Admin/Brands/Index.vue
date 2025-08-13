@@ -35,7 +35,7 @@ watch(search, debounce((value) => {
 
 const deleteBrand = (brand) => {
     if (confirm('Are you sure you want to delete this brand? This action cannot be undone.')) {
-        router.delete(route('admin.brands.destroy', brand.id));
+        router.delete(route('admin.brands.destroy', brand.slug));
     }
 };
 
@@ -131,8 +131,8 @@ const onImageError = (event) => {
                                             <div class="flex items-center">
                                                 <div v-if="brand.logo" class="flex-shrink-0 h-10 w-10">
                                                     <img 
-                                                        class="h-10 w-10 rounded-full object-contain" 
-                                                        :src="brand.logo && brand.logo.startsWith('http') ? brand.logo : '/storage/' + (brand.logo || '')" 
+                                                        class="h-10 w-10 rounded-full object-contain bg-gray-100" 
+                                                        :src="brand.logo ? (brand.logo.startsWith('http') ? brand.logo : `/storage/${brand.logo}`) : ''" 
                                                         :alt="brand.name"
                                                         @error="onImageError"
                                                     >
@@ -163,13 +163,13 @@ const onImageError = (event) => {
                                         </td>
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <Link 
-                                                :href="route('admin.brands.show', brand.id)" 
+                                                :href="route('admin.brands.show', brand.slug)" 
                                                 class="text-indigo-600 hover:text-indigo-900 mr-4"
                                             >
                                                 View
                                             </Link>
                                             <Link 
-                                                :href="route('admin.brands.edit', brand.id)" 
+                                                :href="route('admin.brands.edit', brand.slug)" 
                                                 class="text-indigo-600 hover:text-indigo-900 mr-4"
                                             >
                                                 Edit

@@ -1,10 +1,13 @@
 <script setup>
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { ref, watch } from 'vue';
 
 const props = defineProps({
-    brand: Object,
+    brand: {
+        type: Object,
+        required: true
+    }
 });
 
 const form = useForm({
@@ -19,12 +22,56 @@ const form = useForm({
     logo: null,
 });
 
-const preview = ref(props.brand.logo ? `/storage/${props.brand.logo}` : null);
+const preview = ref(
+    props.brand.logo 
+        ? (props.brand.logo.startsWith('http') ? props.brand.logo : `/storage/${props.brand.logo}`)
+        : null
+);
 const showLogoDelete = ref(false);
 
 const submit = () => {
-    form.put(route('admin.brands.update', props.brand.id), {
+    // Create a new form data object with all fields from the form
+    const formData = {
+        name: form.name,
+        slug: form.slug,
+        description: form.description || '',
+        website: form.website || '',
+        is_active: form.is_active,
+        order: form.order || 0,
+        meta_title: form.meta_title || '',
+        meta_description: form.meta_description || ''
+    };
+    
+    // Create FormData for file upload
+    const formDataObj = new FormData();
+    
+    // Append all fields to FormData
+    Object.entries(formData).forEach(([key, value]) => {
+        if (value !== null && value !== undefined) {
+            formDataObj.append(key, value);
+        }
+    });
+    
+    // Handle logo - only include if it's a file
+    if (form.logo && form.logo instanceof File) {
+        formDataObj.append('logo', form.logo);
+    }
+    
+    // Add delete_logo flag if set
+    if (form.delete_logo) {
+        formDataObj.append('delete_logo', '1');
+    }
+    
+    // Submit the form using PUT directly
+    form.put(route('admin.brands.update', props.brand.slug), formDataObj, {
         preserveScroll: true,
+        forceFormData: true,
+        onSuccess: () => {
+            // Handle success if needed
+        },
+        onError: (errors) => {
+            console.error('Error updating brand:', errors);
+        }
     });
 };
 
@@ -48,9 +95,13 @@ const removeLogo = () => {
     preview.value = null;
     showLogoDelete.value = false;
     
-    // If there was a previous logo, we need to send a special value to delete it
-    if (props.brand.logo) {
-        form.logo = 'DELETE';
+    // Set flag to indicate logo should be removed on the server
+    form.delete_logo = true;
+};
+
+const deleteBrand = () => {
+    if (confirm('Are you sure you want to delete this brand? This action cannot be undone.')) {
+        router.delete(route('admin.brands.destroy', props.brand.slug));
     }
 };
 
@@ -286,7 +337,7 @@ watch(() => form.name, (newName) => {
                                 <div class="flex justify-between">
                                     <button 
                                         type="button" 
-                                        @click="if(confirm('Are you sure you want to delete this brand?')) $inertia.delete(route('admin.brands.destroy', brand.id))"
+                                        @click="deleteBrand"
                                         class="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                                         :disabled="form.processing"
                                     >

@@ -87,8 +87,13 @@ class BrandController extends Controller
     {
         $validated = $request->validated();
 
-        // Handle file upload
-        if ($request->hasFile('logo')) {
+        // Handle logo deletion if requested
+        if ($request->input('delete_logo') && $brand->logo) {
+            Storage::disk('public')->delete($brand->logo);
+            $validated['logo'] = null;
+        }
+        // Handle new file upload
+        elseif ($request->hasFile('logo')) {
             // Delete old logo if exists
             if ($brand->logo) {
                 Storage::disk('public')->delete($brand->logo);
@@ -96,6 +101,10 @@ class BrandController extends Controller
             
             $path = $request->file('logo')->store('brands', 'public');
             $validated['logo'] = $path;
+        }
+        // If no logo in request, keep the existing one
+        else {
+            unset($validated['logo']);
         }
 
         $brand->update($validated);
