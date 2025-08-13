@@ -31,10 +31,10 @@ class ProductController extends Controller
                     ->exists();
             }
 
-            // Format price for display
-            $product->formatted_price = number_format($product->price / 100, 2);
+            // Format price for display (price stored as decimal 10,2)
+            $product->formatted_price = number_format((float) $product->price, 2);
             if ($product->sale_price) {
-                $product->formatted_sale_price = number_format($product->sale_price / 100, 2);
+                $product->formatted_sale_price = number_format((float) $product->sale_price, 2);
             }
 
             // Get related products (same category, excluding current product)
@@ -49,9 +49,9 @@ class ProductController extends Controller
                 ->limit(4)
                 ->get()
                 ->map(function ($item) {
-                    $item->formatted_price = number_format($item->price / 100, 2);
+                    $item->formatted_price = number_format((float) $item->price, 2);
                     if ($item->sale_price) {
-                        $item->formatted_sale_price = number_format($item->sale_price / 100, 2);
+                        $item->formatted_sale_price = number_format((float) $item->sale_price, 2);
                     }
                     return $item;
                 });

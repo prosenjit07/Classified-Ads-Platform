@@ -23,57 +23,30 @@ Route::get('/', function (Request $request) {
             'filters' => [],
         ]);
     }
-    // Get filter parameters
+    // Gather filters for UI display
     $filters = $request->only(['search', 'category', 'brand', 'min_price', 'max_price', 'condition', 'sort_by', 'per_page']);
-    
-    // Default values
+
+    // Defaults
     $perPage = $request->input('per_page', 12);
     $sortBy = $request->input('sort_by', 'latest');
-    
-    // Build the query
-    $query = Product::with(['category', 'brand', 'media'])
-        ->when($request->search, function ($query, $search) {
-            $query->where('name', 'like', "%{$search}%")
-                  ->orWhere('description', 'like', "%{$search}%");
-        })
-        ->when($request->category, function ($query, $categoryId) {
-            $query->where('category_id', $categoryId);
-        })
-        ->when($request->brand, function ($query, $brandId) {
-            $query->where('brand_id', $brandId);
-        })
-        ->when($request->min_price, function ($query, $minPrice) {
-            $query->where('price', '>=', $minPrice * 100); // Convert to cents
-        })
-        ->when($request->max_price, function ($query, $maxPrice) {
-            $query->where('price', '<=', $maxPrice * 100); // Convert to cents
-        })
-        ->when($request->condition, function ($query, $condition) {
-            $query->where('condition', $condition);
-        });
-    
-    // Apply sorting
-    switch ($sortBy) {
-        case 'price_asc':
-            $query->orderBy('price');
-            break;
-        case 'price_desc':
-            $query->orderByDesc('price');
-            break;
-        case 'name_asc':
-            $query->orderBy('name');
-            break;
-        case 'name_desc':
-            $query->orderByDesc('name');
-            break;
-        case 'latest':
-        default:
-            $query->latest();
-            break;
-    }
-    
-    // Get paginated results
-    $products = $query->paginate($perPage)->withQueryString();
+
+    // Normalize filters for model scopes
+    $scopeFilters = [
+        'search' => $request->input('search'),
+        'category_id' => $request->input('category_id', $request->input('category')), // support both keys
+        'brand_id' => $request->input('brand_id', $request->input('brand')),
+        'min_price' => $request->input('min_price'),
+        'max_price' => $request->input('max_price'),
+        'condition' => $request->input('condition'),
+    ];
+
+    // Build query using model scopes (industry-standard approach)
+    $products = Product::with(['category', 'brand', 'media'])
+        ->active()
+        ->filter($scopeFilters)
+        ->sort($sortBy)
+        ->paginate($perPage)
+        ->withQueryString();
     
     // Check wishlist status for each product if user is authenticated
     if (auth()->check()) {
@@ -94,10 +67,6 @@ Route::get('/', function (Request $request) {
 
 // Product details route
 Route::get('/products/{product:slug}', [ProductController::class, 'show'])->name('products.show');
-
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard');
-})->middleware(['auth', 'verified'])->name('dashboard');
 
 // Admin routes
 Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(function () {
@@ -121,10 +90,24 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 });
 
 // Regular user routes
-Route::middleware('auth')->group(function () {
+// User routes
+Route::middleware(['auth'])->group(function () {
+    // Dashboard
+    Route::get('/dashboard', [\App\Http\Controllers\User\DashboardController::class, 'index'])
+        ->name('dashboard');
+        
+    // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    
+    // Wishlist
+    Route::get('/wishlist', [\App\Http\Controllers\User\WishlistController::class, 'index'])
+        ->name('wishlist.index');
+    
+    // Recently Viewed (if implemented)
+    // Route::get('/recently-viewed', [\App\Http\Controllers\User\RecentlyViewedController::class, 'index'])
+    //     ->name('recently-viewed.index');
 });
 
 require __DIR__.'/auth.php';

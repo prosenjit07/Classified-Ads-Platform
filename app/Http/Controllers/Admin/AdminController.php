@@ -28,29 +28,38 @@ class AdminController extends Controller
      */
     public function dashboard()
     {
-        $stats = [
-            'total_products' => Product::count(),
-            'total_categories' => Category::count(),
-            'total_brands' => Brand::count(),
-            'latest_products' => Product::with(['category', 'brand'])
-                ->latest()
-                ->take(5)
-                ->get()
-                ->map(function ($product) {
-                    return [
-                        'id' => $product->id,
-                        'name' => $product->name,
-                        'price' => $product->price,
-                        'status' => $product->is_active ? 'Active' : 'Inactive',
-                        'category' => $product->category->name ?? 'N/A',
-                        'brand' => $product->brand->name ?? 'N/A',
-                    ];
-                }),
-        ];
+        try {
+            $stats = [
+                'total_products' => Product::count(),
+                'total_categories' => Category::count(),
+                'total_brands' => Brand::count(),
+                'latest_products' => Product::with(['category', 'brand'])
+                    ->latest()
+                    ->take(5)
+                    ->get()
+                    ->map(function ($product) {
+                        return [
+                            'id' => $product->id,
+                            'name' => $product->name,
+                            'price' => $product->price,
+                            'status' => $product->is_active ? 'Active' : 'Inactive',
+                            'category' => $product->category->name ?? 'N/A',
+                            'brand' => $product->brand->name ?? 'N/A',
+                        ];
+                    })
+                    ->toArray(),
+            ];
 
-        return Inertia::render('Admin/Dashboard', [
-            'stats' => $stats
-        ]);
+            return Inertia::render('Admin/Dashboard', [
+                'stats' => $stats,
+                'flash' => [
+                    'success' => session('success'),
+                    'error' => session('error')
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Error loading dashboard: ' . $e->getMessage());
+        }
     }
 
     /**

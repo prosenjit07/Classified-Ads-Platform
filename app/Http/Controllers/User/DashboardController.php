@@ -21,7 +21,7 @@ class DashboardController extends Controller
         $user = Auth::user();
         
         // Get wishlist items with product details
-        $wishlistItems = $user->wishlist()
+        $wishlistItems = Wishlist::where('user_id', $user->id)
             ->with(['product.category', 'product.brand', 'product.media'])
             ->latest()
             ->take(6)
@@ -34,7 +34,7 @@ class DashboardController extends Controller
             'wishlistItems' => $wishlistItems,
             'recentlyViewed' => $recentlyViewed,
             'stats' => [
-                'wishlist_count' => $user->wishlist()->count(),
+                'wishlist_count' => Wishlist::where('user_id', $user->id)->count(),
                 'recently_viewed_count' => $recentlyViewed->count(),
             ]
         ]);
@@ -51,22 +51,30 @@ class DashboardController extends Controller
         // This is a basic implementation. You might want to use a dedicated table for tracking views.
         // For now, we'll return recently added products as a placeholder.
         return Product::with(['category', 'brand', 'media'])
-            ->active()
+            ->where('is_active', true) // Only active products
             ->latest()
             ->take(6)
             ->get()
-            ->map(function ($product) {
+            ->map(function ($product) use ($user) {
                 return [
                     'id' => $product->id,
+                    
                     'name' => $product->name,
                     'slug' => $product->slug,
                     'price' => $product->price,
                     'sale_price' => $product->sale_price,
-                    'category' => $product->category ? $product->category->only(['id', 'name', 'slug']) : null,
-                    'brand' => $product->brand ? $product->brand->only(['id', 'name', 'slug']) : null,
+                    'category' => $product->category ? [
+                        'id' => $product->category->id,
+                        'name' => $product->category->name,
+                        'slug' => $product->category->slug
+                    ] : null,
+                    'brand' => $product->brand ? [
+                        'id' => $product->brand->id,
+                        'name' => $product->brand->name,
+                        'slug' => $product->brand->slug
+                    ] : null,
                     'image' => $product->getFirstMediaUrl('products', 'thumb'),
-                    'is_in_wishlist' => auth()->check() ? 
-                        auth()->user()->wishlist()->where('product_id', $product->id)->exists() : false,
+                    'is_in_wishlist' => $user->wishlist()->where('product_id', $product->id)->exists(),
                 ];
             });
     }

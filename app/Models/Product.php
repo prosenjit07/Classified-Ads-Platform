@@ -13,6 +13,7 @@ use Spatie\MediaLibrary\InteractsWithMedia;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class Product extends Model implements HasMedia
 {
@@ -83,7 +84,13 @@ class Product extends Model implements HasMedia
      */
     public function scopeActive($query)
     {
-        return $query->where('status', self::STATUS_ACTIVE);
+        if (Schema::hasColumn('products', 'status')) {
+            return $query->where('status', self::STATUS_ACTIVE);
+        }
+        if (Schema::hasColumn('products', 'is_active')) {
+            return $query->where('is_active', true);
+        }
+        return $query;
     }
     
     /**
@@ -94,7 +101,13 @@ class Product extends Model implements HasMedia
      */
     public function scopeInactive($query)
     {
-        return $query->where('status', self::STATUS_INACTIVE);
+        if (Schema::hasColumn('products', 'status')) {
+            return $query->where('status', self::STATUS_INACTIVE);
+        }
+        if (Schema::hasColumn('products', 'is_active')) {
+            return $query->where('is_active', false);
+        }
+        return $query;
     }
     
     /**
@@ -105,7 +118,10 @@ class Product extends Model implements HasMedia
      */
     public function scopeDraft($query)
     {
-        return $query->where('status', self::STATUS_DRAFT);
+        if (Schema::hasColumn('products', 'status')) {
+            return $query->where('status', self::STATUS_DRAFT);
+        }
+        return $query;
     }
 
     /**
@@ -455,7 +471,9 @@ class Product extends Model implements HasMedia
         return match($sortBy) {
             'price_asc' => $query->orderBy('price'),
             'price_desc' => $query->orderByDesc('price'),
-            'newest' => $query->latest(),
+            'name_asc' => $query->orderBy('name'),
+            'name_desc' => $query->orderByDesc('name'),
+            'newest', 'latest' => $query->latest(),
             'oldest' => $query->oldest(),
             default => $query->latest(),
         };

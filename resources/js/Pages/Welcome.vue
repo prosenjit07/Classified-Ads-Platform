@@ -109,6 +109,10 @@ const toggleWishlist = (productId) => {
                         class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
                         Dashboard
                     </Link>
+                    <Link v-if="$page.props.auth.user" :href="route('logout')" method="post" as="button"
+                        class="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium">
+                        Log out
+                    </Link>
                 </div>
             </div>
         </div>
@@ -215,7 +219,7 @@ const toggleWishlist = (productId) => {
                             <!-- Product Image -->
                             <div class="relative">
                                 <Link :href="route('products.show', product.slug)" class="block">
-                                    <img :src="product.media[0]?.original_url || 'https://via.placeholder.com/300x200'" 
+                                    <img :src="product.media[0]?.original_url || 'https://placehold.co/600x400/ffffff/e5e7eb?text=No+Image'" 
                                         :alt="product.name"
                                         class="w-full h-48 object-cover">
                                 </Link>
@@ -364,7 +368,7 @@ const toggleWishlist = (productId) => {
                                                 <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
                                             </svg>
                                         </Link>
-                                        <Link v-else class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-300 cursor-not-allowed">
+                                        <Link href="#" class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-300 cursor-not-allowed" aria-disabled="true">
                                             <span class="sr-only">Previous</span>
                                             <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                                 <path fill-rule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clip-rule="evenodd" />
@@ -389,7 +393,7 @@ const toggleWishlist = (productId) => {
                                                 <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
                                             </svg>
                                         </Link>
-                                        <Link v-else class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-300 cursor-not-allowed">
+                                        <Link href="#" class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-300 cursor-not-allowed" aria-disabled="true">
                                             <span class="sr-only">Next</span>
                                             <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                                                 <path fill-rule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clip-rule="evenodd" />
