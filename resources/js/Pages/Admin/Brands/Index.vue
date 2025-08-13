@@ -38,6 +38,12 @@ const deleteBrand = (brand) => {
         router.delete(route('admin.brands.destroy', brand.id));
     }
 };
+
+const onImageError = (event) => {
+    // Set a transparent pixel as fallback
+    event.target.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    event.target.onerror = null; // Prevent infinite loop
+};
 </script>
 
 <template>
@@ -124,7 +130,12 @@ const deleteBrand = (brand) => {
                                         <td class="px-6 py-4 whitespace-nowrap">
                                             <div class="flex items-center">
                                                 <div v-if="brand.logo" class="flex-shrink-0 h-10 w-10">
-                                                    <img class="h-10 w-10 rounded-full object-contain" :src="'/storage/' + brand.logo" :alt="brand.name">
+                                                    <img 
+                                                        class="h-10 w-10 rounded-full object-contain" 
+                                                        :src="brand.logo && brand.logo.startsWith('http') ? brand.logo : '/storage/' + (brand.logo || '')" 
+                                                        :alt="brand.name"
+                                                        @error="onImageError"
+                                                    >
                                                 </div>
                                                 <div class="ml-4">
                                                     <div class="text-sm font-medium text-gray-900">
@@ -176,14 +187,16 @@ const deleteBrand = (brand) => {
                         </div>
 
                         <!-- Pagination -->
-                        <div v-if="brands.meta.last_page > 1" class="mt-4">
-                            <div class="flex items-center justify-between">
-                                <div class="text-sm text-gray-700">
-                                    Showing {{ brands.meta.from }} to {{ brands.meta.to }} of {{ brands.meta.total }} results
+                        <div v-if="brands.last_page > 1" class="mt-4">
+                            <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+                                <div>
+                                    <p class="text-sm text-gray-700">
+                                        Showing <span class="font-medium">{{ brands.from }}</span> to <span class="font-medium">{{ brands.to }}</span> of <span class="font-medium">{{ brands.total }}</span> results
+                                    </p>
                                 </div>
                                 <div class="flex space-x-2">
                                     <Link
-                                        v-for="link in brands.meta.links"
+                                        v-for="link in brands.links"
                                         :key="link.label"
                                         :href="link.url || '#'"
                                         :class="{

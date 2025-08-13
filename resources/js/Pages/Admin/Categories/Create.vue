@@ -41,6 +41,17 @@ const generateSlug = () => {
 const submit = () => {
     form.post(route('admin.categories.store'), {
         preserveScroll: true,
+        onSuccess: () => {
+            console.log("okk");
+            // This will be handled by the controller redirect
+            // The page will refresh with the updated categories list
+        },
+        onError: (errors) => {
+            console.error('Error creating category:', errors);
+        },
+        onFinish: () => {
+            form.reset();
+        }
     });
 };
 

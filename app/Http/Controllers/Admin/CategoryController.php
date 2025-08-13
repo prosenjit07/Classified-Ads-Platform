@@ -18,35 +18,63 @@ class CategoryController extends Controller
      */
     public function index()
     {
-        // Get categories as a flat list first
+        // Get all categories with parent relationship
         $categories = Category::with('parent')
             ->orderBy('parent_id')
             ->orderBy('order')
             ->get()
+            ->map(function ($category) {
+                return [
+                    'id' => $category->id,
+                    'name' => $category->name,
+                    'slug' => $category->slug,
+                    'parent_id' => $category->parent_id,
+                    'status' => $category->status,
+                    'order' => $category->order,
+                    'description' => $category->description,
+                    'meta_title' => $category->meta_title,
+                    'meta_description' => $category->meta_description,
+                    'created_at' => $category->created_at,
+                    'updated_at' => $category->updated_at,
+                    'parent' => $category->parent,
+                    'form_fields' => $category->form_fields,
+                    'children' => [] // Initialize children array
+                ];
+            })
             ->toArray();
 
-        // Build the tree structure manually
+        // Build the tree structure
         $tree = [];
         $itemsByReference = [];
 
         // First pass: build the array with references
-        foreach ($categories as $key => $category) {
-            $itemsByReference[$category['id']] = &$categories[$key];
+        foreach ($categories as $key => &$category) {
+            $itemsByReference[$category['id']] = &$category;
             $itemsByReference[$category['id']]['children'] = [];
         }
+        unset($category); // Break the reference with the last element
 
         // Second pass: build the tree
-        foreach ($categories as $key => $category) {
+        $flatTree = [];
+        foreach ($categories as $key => &$category) {
             $parentId = $category['parent_id'];
             if ($parentId && isset($itemsByReference[$parentId])) {
                 $itemsByReference[$parentId]['children'][] = &$itemsByReference[$category['id']];
             } else {
-                $tree[] = &$itemsByReference[$category['id']];
+                $flatTree[] = &$itemsByReference[$category['id']];
             }
         }
 
+        // For AJAX requests, return JSON
+        if (request()->expectsJson()) {
+            return response()->json([
+                'categories' => $flatTree
+            ]);
+        }
+
+        // For regular requests, return Inertia response
         return Inertia::render('Admin/Categories/Index', [
-            'categories' => $tree,
+            'categories' => $flatTree,
         ]);
     }
 
@@ -87,13 +115,14 @@ class CategoryController extends Controller
             
             DB::commit();
             
-            return redirect()
-                ->route('admin.categories.index')
+            return to_route('admin.categories.index')
                 ->with('success', 'Category created successfully.');
                 
         } catch (\Exception $e) {
             DB::rollBack();
-            return back()->with('error', 'Error creating category: ' . $e->getMessage());
+            return back()
+                ->withInput()
+                ->withErrors(['error' => 'Error creating category: ' . $e->getMessage()]);
         }
     }
 
@@ -152,8 +181,7 @@ class CategoryController extends Controller
             
             DB::commit();
             
-            return redirect()
-                ->route('admin.categories.index')
+            return to_route('admin.categories.index')
                 ->with('success', 'Category updated successfully.');
                 
         } catch (\Exception $e) {

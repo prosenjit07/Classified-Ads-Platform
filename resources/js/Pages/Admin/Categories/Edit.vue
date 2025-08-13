@@ -72,9 +72,6 @@ const removeField = (index) => {
             <div class="flex justify-between items-center">
                 <h2>Edit Category: {{ props.category.name }}</h2>
                 <div class="space-x-2">
-                    <Link :href="route('admin.categories.show', props.category.id)" class="btn">
-                        View
-                    </Link>
                     <Link :href="route('admin.categories.index')" class="btn">
                         Back to Categories
                     </Link>

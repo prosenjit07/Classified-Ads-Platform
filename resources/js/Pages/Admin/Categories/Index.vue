@@ -1,12 +1,13 @@
 <script setup>
 import { Head, Link, usePage, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
-import { ref } from 'vue';
+import { ref, watch, computed, onMounted } from 'vue';
 
 const props = defineProps({
     categories: {
         type: Array,
         required: true,
+        default: () => []
     },
     flash: {
         type: Object,
@@ -18,14 +19,45 @@ const props = defineProps({
     },
 });
 
-const { categories } = props;
+const categories = ref([...props.categories]);
+const isLoading = ref(false);
+
+// Function to fetch categories
+const fetchCategories = async () => {
+    try {
+        isLoading.value = true;
+        const response = await fetch(route('admin.categories.index'));
+        if (!response.ok) throw new Error('Failed to fetch categories');
+        const data = await response.json();
+        categories.value = data.categories || [];
+    } catch (error) {
+        console.error('Error fetching categories:', error);
+    } finally {
+        isLoading.value = false;
+    }
+};
+
+// Fetch categories when component is mounted
+onMounted(() => {
+    if (categories.value.length === 0) {
+        fetchCategories();
+    }
+});
+
+// Watch for changes in props
+watch(() => props.categories, (newCategories) => {
+    if (newCategories && newCategories.length > 0) {
+        categories.value = [...newCategories];
+    }
+}, { immediate: true, deep: true });
 
 const deleteCategory = (id) => {
     if (confirm('Are you sure you want to delete this category? This action cannot be undone.')) {
         router.delete(route('admin.categories.destroy', { category: id }), {
             preserveScroll: true,
             onSuccess: () => {
-                // Success message is handled by the controller redirect
+                // Refresh the categories list after deletion
+                fetchCategories();
             },
             onError: (errors) => {
                 console.error('Error deleting category:', errors);
@@ -41,15 +73,16 @@ const deleteCategory = (id) => {
     }
 };
 
-const renderCategories = (categories, level = 0) => {
-    return categories.map(category => ({
+const renderCategories = (cats, level = 0) => {
+    return cats.map(category => ({
         ...category,
         level,
         children: category.children ? renderCategories(category.children, level + 1) : []
     }));
 };
 
-const flattenedCategories = renderCategories(categories);
+// Make flattenedCategories a computed property to react to changes
+const flattenedCategories = computed(() => renderCategories(categories.value));
 </script>
 
 <template>
@@ -74,6 +107,16 @@ const flattenedCategories = renderCategories(categories);
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                     <div class="p-6 bg-white border-b border-gray-200">
+                        <!-- Loading State -->
+                        <div v-if="isLoading" class="mb-6 p-4 bg-blue-100 border border-blue-400 text-blue-700 rounded">
+                            Loading categories...
+                        </div>
+
+                        <!-- Error State -->
+                        <div v-else-if="categories.length === 0" class="mb-6 p-4 bg-yellow-100 border border-yellow-400 text-yellow-700 rounded">
+                            No categories found. Add your first category to get started.
+                        </div>
+
                         <!-- Flash Messages -->
                         <div v-if="$page.props.flash?.success" class="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
                             {{ $page.props.flash.success }}
