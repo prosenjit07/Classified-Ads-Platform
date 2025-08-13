@@ -73,20 +73,24 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // Dashboard
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     
-    // Resource routes
-    Route::resource('categories', 'App\Http\Controllers\Admin\CategoryController');
-    Route::resource('brands', 'App\Http\Controllers\Admin\BrandController');
-    Route::resource('products', 'App\Http\Controllers\Admin\ProductController');
+    // Categories Resource Routes
+    Route::resource('categories', 'App\Http\Controllers\Admin\CategoryController')->except(['show']);
     
-    // Additional routes for dynamic fields
+    // Additional routes for category fields
     Route::post('categories/{category}/fields', [\App\Http\Controllers\Admin\CategoryController::class, 'storeField'])
         ->name('categories.fields.store');
     Route::delete('categories/{category}/fields/{field}', [\App\Http\Controllers\Admin\CategoryController::class, 'destroyField'])
         ->name('categories.fields.destroy');
-    // Product Management
-    Route::resource('products', \App\Http\Controllers\Admin\ProductController::class);
-    Route::post('products/{product}/media', [\App\Http\Controllers\Admin\ProductController::class, 'storeMedia'])->name('products.media.store');
-    Route::delete('products/{product}/media/{media}', [\App\Http\Controllers\Admin\ProductController::class, 'destroyMedia'])->name('products.media.destroy');
+        
+    // Brands Resource Routes
+    Route::resource('brands', 'App\Http\Controllers\Admin\BrandController');
+    
+    // Products Resource Routes with Media
+    Route::resource('products', 'App\Http\Controllers\Admin\ProductController');
+    Route::post('products/{product}/media', [\App\Http\Controllers\Admin\ProductController::class, 'storeMedia'])
+        ->name('products.media.store');
+    Route::delete('products/{product}/media/{media}', [\App\Http\Controllers\Admin\ProductController::class, 'destroyMedia'])
+        ->name('products.media.destroy');
 });
 
 // Regular user routes

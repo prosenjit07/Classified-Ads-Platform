@@ -21,12 +21,22 @@ const props = defineProps({
 const { categories } = props;
 
 const deleteCategory = (id) => {
-    if (confirm('Are you sure you want to delete this category?')) {
-        router.delete(route('admin.categories.destroy', id), {
+    if (confirm('Are you sure you want to delete this category? This action cannot be undone.')) {
+        router.delete(route('admin.categories.destroy', { category: id }), {
             preserveScroll: true,
             onSuccess: () => {
-                // Show success message
+                // Success message is handled by the controller redirect
             },
+            onError: (errors) => {
+                console.error('Error deleting category:', errors);
+                let errorMessage = 'Failed to delete category. ';
+                if (errors?.message) {
+                    errorMessage += errors.message;
+                } else if (errors?.error) {
+                    errorMessage += errors.error;
+                }
+                alert(errorMessage);
+            }
         });
     }
 };
@@ -129,16 +139,22 @@ const flattenedCategories = renderCategories(categories);
                                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                             <div class="flex justify-end space-x-2">
                                                 <Link 
-                                                    :href="route('admin.categories.edit', category.id)"
-                                                    class="text-indigo-600 hover:text-indigo-900 mr-3"
+                                                    :href="route('admin.categories.edit', { category: category.id })"
+                                                    class="text-indigo-600 hover:text-indigo-900 mr-3 focus:outline-none"
+                                                    :title="'Edit ' + category.name"
                                                 >
                                                     Edit
                                                 </Link>
                                                 <button
+                                                    type="button"
                                                     @click="deleteCategory(category.id)"
-                                                    class="text-red-600 hover:text-red-900"
+                                                    class="text-red-600 hover:text-red-900 focus:outline-none"
+                                                    :disabled="category.children && category.children.length > 0"
+                                                    :title="category.children && category.children.length > 0 ? 'Cannot delete category with subcategories' : 'Delete category'"
                                                 >
-                                                    Delete
+                                                    <span :class="{ 'opacity-50 cursor-not-allowed': category.children && category.children.length > 0 }">
+                                                        Delete
+                                                    </span>
                                                 </button>
                                             </div>
                                         </td>
