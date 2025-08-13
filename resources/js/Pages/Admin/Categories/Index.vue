@@ -1,21 +1,28 @@
 <script setup>
-import { Head, Link, usePage } from '@inertiajs/vue3';
+import { Head, Link, usePage, router } from '@inertiajs/vue3';
 import AdminLayout from '@/Layouts/AdminLayout.vue';
 import { ref } from 'vue';
 
-const { categories } = defineProps({
+const props = defineProps({
     categories: {
         type: Array,
         required: true,
     },
+    flash: {
+        type: Object,
+        default: () => ({}),
+    },
+    errors: {
+        type: Object,
+        default: () => ({}),
+    },
 });
 
-const page = usePage();
-const flash = page.props.flash;
+const { categories } = props;
 
 const deleteCategory = (id) => {
     if (confirm('Are you sure you want to delete this category?')) {
-        Inertia.delete(route('admin.categories.destroy', id), {
+        router.delete(route('admin.categories.destroy', id), {
             preserveScroll: true,
             onSuccess: () => {
                 // Show success message
@@ -58,11 +65,16 @@ const flattenedCategories = renderCategories(categories);
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                     <div class="p-6 bg-white border-b border-gray-200">
                         <!-- Flash Messages -->
-                        <div v-if="flash.success" class="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
-                            {{ flash.success }}
+                        <div v-if="$page.props.flash?.success" class="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+                            {{ $page.props.flash.success }}
                         </div>
-                        <div v-if="flash.error" class="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
-                            {{ flash.error }}
+                        <div v-if="$page.props.flash?.error" class="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+                            {{ $page.props.flash.error }}
+                        </div>
+                        <div v-if="Object.keys(errors).length > 0" class="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+                            <div v-for="(error, key) in errors" :key="key">
+                                {{ error }}
+                            </div>
                         </div>
 
                         <!-- Categories Table -->

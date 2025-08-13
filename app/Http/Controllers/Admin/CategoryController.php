@@ -18,14 +18,35 @@ class CategoryController extends Controller
      */
     public function index()
     {
+        // Get categories as a flat list first
         $categories = Category::with('parent')
             ->orderBy('parent_id')
             ->orderBy('order')
             ->get()
-            ->toTree();
+            ->toArray();
+
+        // Build the tree structure manually
+        $tree = [];
+        $itemsByReference = [];
+
+        // First pass: build the array with references
+        foreach ($categories as $key => $category) {
+            $itemsByReference[$category['id']] = &$categories[$key];
+            $itemsByReference[$category['id']]['children'] = [];
+        }
+
+        // Second pass: build the tree
+        foreach ($categories as $key => $category) {
+            $parentId = $category['parent_id'];
+            if ($parentId && isset($itemsByReference[$parentId])) {
+                $itemsByReference[$parentId]['children'][] = &$itemsByReference[$category['id']];
+            } else {
+                $tree[] = &$itemsByReference[$category['id']];
+            }
+        }
 
         return Inertia::render('Admin/Categories/Index', [
-            'categories' => $categories,
+            'categories' => $tree,
         ]);
     }
 

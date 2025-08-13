@@ -1,0 +1,49 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration
+{
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        // Add _lft column if it doesn't exist
+        if (!Schema::hasColumn('categories', '_lft')) {
+            Schema::table('categories', function (Blueprint $table) {
+                $table->unsignedInteger('_lft')->default(0);
+            });
+        }
+        
+        // Add _rgt column if it doesn't exist
+        if (!Schema::hasColumn('categories', '_rgt')) {
+            Schema::table('categories', function (Blueprint $table) {
+                $table->unsignedInteger('_rgt')->default(0);
+            });
+        }
+        
+        // Add index for better performance if it doesn't exist
+        Schema::table('categories', function (Blueprint $table) {
+            $sm = Schema::getConnection()->getDoctrineSchemaManager();
+            $indexes = $sm->listTableIndexes('categories');
+            
+            if (!isset($indexes['categories__lft__rgt_parent_id_index'])) {
+                $table->index(['_lft', '_rgt', 'parent_id'], 'categories__lft__rgt_parent_id_index');
+            }
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::table('categories', function (Blueprint $table) {
+            $table->dropNestedSet();
+        });
+    }
+};

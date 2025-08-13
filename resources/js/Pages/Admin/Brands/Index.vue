@@ -6,8 +6,22 @@ import { router } from '@inertiajs/vue3';
 import { debounce } from 'lodash';
 
 const props = defineProps({
-    brands: Object,
-    filters: Object,
+    brands: {
+        type: Object,
+        required: true,
+    },
+    filters: {
+        type: Object,
+        default: () => ({}),
+    },
+    flash: {
+        type: Object,
+        default: () => ({}),
+    },
+    errors: {
+        type: Object,
+        default: () => ({}),
+    },
 });
 
 const search = ref(props.filters.search || '');
@@ -45,6 +59,19 @@ const deleteBrand = (brand) => {
             <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
                 <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                     <div class="p-6 bg-white border-b border-gray-200">
+                        <!-- Flash Messages -->
+                        <div v-if="$page.props.flash?.success" class="mb-6 p-4 bg-green-100 border border-green-400 text-green-700 rounded">
+                            {{ $page.props.flash.success }}
+                        </div>
+                        <div v-if="$page.props.flash?.error" class="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+                            {{ $page.props.flash.error }}
+                        </div>
+                        <div v-if="Object.keys(errors).length > 0" class="mb-6 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
+                            <div v-for="(error, key) in errors" :key="key">
+                                {{ error }}
+                            </div>
+                        </div>
+
                         <!-- Search and Filters -->
                         <div class="mb-6">
                             <div class="flex justify-between items-center">
