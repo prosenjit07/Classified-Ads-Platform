@@ -154,7 +154,7 @@
                   <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div class="flex justify-end space-x-2">
                       <Link 
-                        :href="route('admin.products.show', product.id)" 
+                        :href="route('admin.products.show', { product: product.slug || product.id })" 
                         class="text-indigo-600 hover:text-indigo-900"
                         title="View"
                       >
@@ -164,7 +164,7 @@
                         </svg>
                       </Link>
                       <Link 
-                        :href="route('admin.products.edit', product.id)" 
+                        :href="route('admin.products.edit', { product: product.slug || product.id })" 
                         class="text-blue-600 hover:text-blue-900"
                         title="Edit"
                       >
@@ -202,7 +202,7 @@
     </div>
 
     <!-- Delete Confirmation Modal -->
-    <ConfirmationModal :show="confirmingProductDeletion" @close="closeModal">
+    <ConfirmationModal :show="confirmingProductDeletion" @close="closeModal" @confirm="deleteProduct">
       <template #title>
         Delete Product
       </template>
@@ -327,7 +327,7 @@ const closeModal = () => {
 const deleteProduct = () => {
   deleteForm.processing = true;
   
-  router.delete(route('admin.products.destroy', productToDelete.value.id), {
+  router.delete(route('admin.products.destroy', { product: productToDelete.value.slug || productToDelete.value.id }), {
     preserveScroll: true,
     onSuccess: () => {
       closeModal();
