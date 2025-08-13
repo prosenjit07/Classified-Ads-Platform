@@ -34,24 +34,17 @@ class ProductFactory extends Factory
             'price' => $this->faker->randomFloat(2, 10, 1000),
             'sale_price' => $this->faker->optional(0.3)->randomFloat(2, 5, 800), // 30% chance of having a sale price
             'sku' => strtoupper(Str::random(8)),
-            'quantity' => $this->faker->numberBetween(0, 100),
-            'in_stock' => $this->faker->boolean(80), // 80% chance of being in stock
-            'is_taxable' => $this->faker->boolean(70), // 70% chance of being taxable
-            'shipping_weight' => $this->faker->randomFloat(2, 0.1, 50),
-            'shipping_length' => $this->faker->randomFloat(2, 1, 200),
-            'shipping_width' => $this->faker->randomFloat(2, 1, 200),
-            'shipping_height' => $this->faker->randomFloat(2, 1, 200),
+            'stock_quantity' => $this->faker->numberBetween(0, 100),
+            'manage_stock' => $this->faker->boolean(80), // 80% chance of managing stock
+            'stock_status' => $this->faker->randomElement(['in_stock', 'out_of_stock', 'on_backorder']),
             'category_id' => Category::factory(),
             'brand_id' => Brand::factory(),
-            'status' => $this->faker->randomElement(['draft', 'pending', 'active', 'inactive']),
+            'is_active' => $this->faker->boolean(80), // 80% chance of being active
             'condition' => $this->faker->randomElement(['new', 'used', 'refurbished']),
             'is_featured' => $this->faker->boolean(20), // 20% chance of being featured
-            'is_bestseller' => $this->faker->boolean(15), // 15% chance of being a bestseller
-            'is_new' => $this->faker->boolean(30), // 30% chance of being marked as new
+            'order' => $this->faker->numberBetween(0, 100),
             'meta_title' => $this->faker->sentence,
             'meta_description' => $this->faker->paragraph,
-            'meta_keywords' => implode(',', $this->faker->words(5)),
-            'published_at' => $this->faker->dateTimeBetween('-1 year', 'now'),
         ];
     }
 
@@ -64,7 +57,7 @@ class ProductFactory extends Factory
     {
         return $this->state(function (array $attributes) {
             return [
-                'status' => 'active',
+                'is_active' => true,
             ];
         });
     }
@@ -78,7 +71,37 @@ class ProductFactory extends Factory
     {
         return $this->state(function (array $attributes) {
             return [
-                'status' => 'inactive',
+                'is_active' => false,
+            ];
+        });
+    }
+
+    /**
+     * Indicate that the product is in stock.
+     *
+     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     */
+    public function inStock()
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'stock_status' => 'in_stock',
+                'stock_quantity' => $this->faker->numberBetween(1, 100),
+            ];
+        });
+    }
+
+    /**
+     * Indicate that the product is out of stock.
+     *
+     * @return \Illuminate\Database\Eloquent\Factories\Factory
+     */
+    public function outOfStock()
+    {
+        return $this->state(function (array $attributes) {
+            return [
+                'stock_status' => 'out_of_stock',
+                'stock_quantity' => 0,
             ];
         });
     }
@@ -116,7 +139,7 @@ class ProductFactory extends Factory
      *
      * @return \Illuminate\Database\Eloquent\Factories\Factory
      */
-    public function new()
+    public function asNew()
     {
         return $this->state(function (array $attributes) {
             return [

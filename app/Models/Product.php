@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
@@ -14,6 +15,7 @@ use Illuminate\Support\Facades\Cache;
 
 class Product extends Model implements HasMedia
 {
+    use HasFactory, InteractsWithMedia, SoftDeletes;
     public const STATUS_ACTIVE = 'active';
     public const STATUS_INACTIVE = 'inactive';
     public const STATUS_DRAFT = 'draft';
@@ -178,7 +180,12 @@ class Product extends Model implements HasMedia
             }
             
             // Clear cache on save
-            Cache::tags(['products', 'product_' . $product->id])->flush();
+            if (Cache::getStore() instanceof \Illuminate\Cache\TaggableStore) {
+                Cache::tags(['products', 'product_' . $product->id])->flush();
+            } else {
+                Cache::forget('products');
+                Cache::forget('product_' . $product->id);
+            }
         });
     }
 

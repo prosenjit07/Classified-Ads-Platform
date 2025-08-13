@@ -25,7 +25,7 @@ class CategoryFactory extends Factory
             'name' => $this->faker->unique()->word,
             'slug' => $this->faker->unique()->slug,
             'description' => $this->faker->sentence,
-            'status' => 'active',
+            'status' => true,
             'order' => $this->faker->numberBetween(1, 100),
             'is_featured' => $this->faker->boolean(20), // 20% chance of being featured
             'meta_title' => $this->faker->sentence,
@@ -42,7 +42,7 @@ class CategoryFactory extends Factory
     {
         return $this->state(function (array $attributes) {
             return [
-                'status' => 'active',
+                'status' => true,
             ];
         });
     }
@@ -56,7 +56,7 @@ class CategoryFactory extends Factory
     {
         return $this->state(function (array $attributes) {
             return [
-                'status' => 'inactive',
+                'status' => false,
             ];
         });
     }

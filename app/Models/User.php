@@ -22,6 +22,7 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'is_admin',
         'phone',
         'address',
         'city',
@@ -30,7 +31,6 @@ class User extends Authenticatable
         'country',
         'avatar',
         'preferences',
-        'is_admin',
     ];
 
     /**
@@ -45,20 +45,17 @@ class User extends Authenticatable
     ];
 
     /**
-     * Get the attributes that should be cast.
+     * The attributes that should be cast.
      *
-     * @return array<string, string>
+     * @var array<string, string>
      */
-    protected function casts(): array
-    {
-        return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
-            'preferences' => 'array',
-            'is_admin' => 'boolean',
-        ];
-    }
-    
+    protected $casts = [
+        'email_verified_at' => 'datetime',
+        'password' => 'hashed',
+        'preferences' => 'array',
+        'is_admin' => 'boolean',
+    ];
+
     /**
      * Get the wishlist items for the user.
      * 

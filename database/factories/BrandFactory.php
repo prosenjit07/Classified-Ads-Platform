@@ -30,7 +30,7 @@ class BrandFactory extends Factory
             'description' => $this->faker->paragraph,
             'logo' => $this->faker->imageUrl(200, 200, 'brands', true, $name, false, 'png'),
             'website' => $this->faker->url,
-            'status' => 'active',
+            'is_active' => true,
             'is_featured' => $this->faker->boolean(20), // 20% chance of being featured
             'meta_title' => $this->faker->sentence,
             'meta_description' => $this->faker->paragraph,
@@ -47,7 +47,7 @@ class BrandFactory extends Factory
     {
         return $this->state(function (array $attributes) {
             return [
-                'status' => 'active',
+                'is_active' => true,
             ];
         });
     }
@@ -61,7 +61,7 @@ class BrandFactory extends Factory
     {
         return $this->state(function (array $attributes) {
             return [
-                'status' => 'inactive',
+                'is_active' => false,
             ];
         });
     }
