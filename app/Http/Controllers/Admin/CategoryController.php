@@ -139,9 +139,8 @@ class CategoryController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit($id)
+    public function edit(Category $category)
     {
-        $category = Category::findOrFail($id);
         
         $parentCategories = Category::where('id', '!=', $category->id)
             ->where(function($query) use ($category) {
@@ -161,9 +160,8 @@ class CategoryController extends Controller
     /**
      * Update the specified resource in storage.
      */
-    public function update(UpdateCategoryRequest $request, $id)
+    public function update(UpdateCategoryRequest $request, Category $category)
     {
-        $category = Category::findOrFail($id);
         $validated = $request->validated();
 
         // Generate slug from name if not provided
@@ -193,9 +191,8 @@ class CategoryController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy($id)
+    public function destroy(Category $category)
     {
-        $category = Category::findOrFail($id);
         
         // Prevent deletion if category has children
         if ($category->children()->exists()) {

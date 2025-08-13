@@ -66,57 +66,8 @@ class ProductController extends Controller
     }
 
     /**
-     * Get validation rules for the product.
-     *
-     * @param  \App\Models\Category|null  $category
-     * @return array
+     * Store a newly created resource in storage.
      */
-    protected function getValidationRules(Category $category = null): array
-    {
-        $rules = [
-            // Basic Information
-            'name' => 'required|string|max:255',
-            'slug' => 'required|string|max:255|unique:products,slug',
-            'description' => 'nullable|string',
-            'price' => 'required|numeric|min:0',
-            'sale_price' => 'nullable|numeric|min:0|lt:price',
-            'sku' => 'nullable|string|max:100|unique:products,sku',
-            
-            // Inventory
-            'quantity' => 'required|integer|min:0',
-            'in_stock' => 'boolean',
-            'condition' => 'required|in:new,used,refurbished',
-            
-            // Categorization
-            'category_id' => 'required|exists:categories,id',
-            'brand_id' => 'nullable|exists:brands,id',
-            
-            // Status & Visibility
-            'is_active' => 'boolean',
-            'is_featured' => 'boolean',
-            'status' => 'required|in:active,inactive,draft',
-            
-            // SEO
-            'meta_title' => 'nullable|string|max:255',
-            'meta_description' => 'nullable|string|max:500',
-            'meta_keywords' => 'nullable|string|max:255',
-            
-            // Images
-            'images' => 'nullable|array',
-            'images.*' => 'image|mimes:jpeg,png,jpg,gif,webp|max:2048',
-            
-            // Dynamic fields (will be merged with category fields)
-            'fields' => 'nullable|array',
-        ];
-        
-        // Add dynamic field validation rules if category is provided
-        if ($category) {
-            $rules = array_merge($rules, $category->getFieldValidationRules());
-        }
-        
-        return $rules;
-    }
-    
     /**
      * Store a newly created resource in storage.
      */

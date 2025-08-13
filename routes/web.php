@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\ProductController;
+use App\Http\Requests\ProductFilterRequest;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
@@ -12,7 +13,7 @@ use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 
 // Public routes
-Route::get('/', function (Request $request) {
+Route::get('/', function (ProductFilterRequest $request) {
     if (!Schema::hasTable('products') || !Schema::hasTable('categories') || !Schema::hasTable('brands')) {
         return Inertia::render('Welcome', [
             'canLogin' => Route::has('login'),
