@@ -1,8 +1,8 @@
 <?php
 
 use App\Http\Controllers\API\WishlistController;
+use App\Http\Controllers\API\ProductController as ApiProductController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Admin\ProductController;
 
 /*
 |--------------------------------------------------------------------------
@@ -16,16 +16,16 @@ use App\Http\Controllers\Admin\ProductController;
 */
 
 // Public routes (no authentication required)
-Route::get('/products', [ProductController::class, 'index']);
-Route::get('/products/{product}', [ProductController::class, 'show']);
+Route::get('/products', [ApiProductController::class, 'index']);
+Route::get('/products/{product:slug}', [ApiProductController::class, 'show']);
 
 // Protected routes (authentication required)
 Route::middleware('auth:sanctum')->group(function () {
     // Wishlist routes
     Route::prefix('wishlist')->group(function () {
         Route::get('/', [WishlistController::class, 'index']);
-        Route::post('/{product}', [WishlistController::class, 'add']);
-        Route::delete('/{wishlistItem}', [WishlistController::class, 'remove']);
+        Route::post('/{product}', [WishlistController::class, 'store']);
+        Route::delete('/{wishlistItem}', [WishlistController::class, 'destroy']);
         Route::put('/{wishlistItem}', [WishlistController::class, 'update']);
         Route::post('/{product}/toggle', [WishlistController::class, 'toggle']);
         Route::delete('/', [WishlistController::class, 'clear']);

@@ -2,18 +2,87 @@
 
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\AdminController;
-use Illuminate\Foundation\Application;
+use App\Http\Controllers\ProductController;
+use App\Models\Brand;
+use App\Models\Category;
+use App\Models\Product;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
-Route::get('/', function () {
+// Public routes
+Route::get('/', function (Request $request) {
+    // Get filter parameters
+    $filters = $request->only(['search', 'category', 'brand', 'min_price', 'max_price', 'condition', 'sort_by', 'per_page']);
+    
+    // Default values
+    $perPage = $request->input('per_page', 12);
+    $sortBy = $request->input('sort_by', 'latest');
+    
+    // Build the query
+    $query = Product::with(['category', 'brand', 'media'])
+        ->when($request->search, function ($query, $search) {
+            $query->where('name', 'like', "%{$search}%")
+                  ->orWhere('description', 'like', "%{$search}%");
+        })
+        ->when($request->category, function ($query, $categoryId) {
+            $query->where('category_id', $categoryId);
+        })
+        ->when($request->brand, function ($query, $brandId) {
+            $query->where('brand_id', $brandId);
+        })
+        ->when($request->min_price, function ($query, $minPrice) {
+            $query->where('price', '>=', $minPrice * 100); // Convert to cents
+        })
+        ->when($request->max_price, function ($query, $maxPrice) {
+            $query->where('price', '<=', $maxPrice * 100); // Convert to cents
+        })
+        ->when($request->condition, function ($query, $condition) {
+            $query->where('condition', $condition);
+        });
+    
+    // Apply sorting
+    switch ($sortBy) {
+        case 'price_asc':
+            $query->orderBy('price');
+            break;
+        case 'price_desc':
+            $query->orderByDesc('price');
+            break;
+        case 'name_asc':
+            $query->orderBy('name');
+            break;
+        case 'name_desc':
+            $query->orderByDesc('name');
+            break;
+        case 'latest':
+        default:
+            $query->latest();
+            break;
+    }
+    
+    // Get paginated results
+    $products = $query->paginate($perPage)->withQueryString();
+    
+    // Check wishlist status for each product if user is authenticated
+    if (auth()->check()) {
+        $products->getCollection()->each(function ($product) {
+            $product->is_in_wishlist = auth()->user()->wishlist()->where('product_id', $product->id)->exists();
+        });
+    }
+    
     return Inertia::render('Welcome', [
         'canLogin' => Route::has('login'),
         'canRegister' => Route::has('register'),
-        'laravelVersion' => Application::VERSION,
-        'phpVersion' => PHP_VERSION,
+        'products' => $products,
+        'categories' => Category::active()->get(['id', 'name']),
+        'brands' => Brand::active()->get(['id', 'name']),
+        'filters' => $filters
     ]);
-});
+})->name('welcome');
+
+// Product details route
+Route::get('/products/{product:slug}', [ProductController::class, 'show'])->name('products.show');
 
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard');

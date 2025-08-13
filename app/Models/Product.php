@@ -319,4 +319,55 @@ class Product extends Model implements HasMedia
     {
         return $query->where('stock_status', 'in_stock');
     }
+    
+    /**
+     * Scope a query to filter products based on request parameters.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  array  $filters
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeFilter($query, array $filters)
+    {
+        return $query->when($filters['category_id'] ?? false, function ($query, $categoryId) {
+            $query->where('category_id', $categoryId);
+        })
+        ->when($filters['brand_id'] ?? false, function ($query, $brandId) {
+            $query->where('brand_id', $brandId);
+        })
+        ->when($filters['min_price'] ?? false, function ($query, $minPrice) {
+            $query->where('price', '>=', $minPrice);
+        })
+        ->when($filters['max_price'] ?? false, function ($query, $maxPrice) {
+            $query->where('price', '<=', $maxPrice);
+        })
+        ->when($filters['condition'] ?? false, function ($query, $condition) {
+            $query->where('condition', $condition);
+        })
+        ->when($filters['search'] ?? false, function ($query, $search) {
+            $query->where(function ($query) use ($search) {
+                $query->where('name', 'like', "%{$search}%")
+                      ->orWhere('description', 'like', "%{$search}%")
+                      ->orWhere('sku', 'like', "%{$search}%");
+            });
+        });
+    }
+    
+    /**
+     * Scope a query to sort products.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder  $query
+     * @param  string|null  $sortBy
+     * @return \Illuminate\Database\Eloquent\Builder
+     */
+    public function scopeSort($query, $sortBy = null)
+    {
+        return match($sortBy) {
+            'price_asc' => $query->orderBy('price'),
+            'price_desc' => $query->orderByDesc('price'),
+            'newest' => $query->latest(),
+            'oldest' => $query->oldest(),
+            default => $query->latest(),
+        };
+    }
 }
