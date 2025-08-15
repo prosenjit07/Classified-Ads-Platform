@@ -247,7 +247,7 @@ const toggleWishlist = (productId) => {
                                         
                                         <!-- Wishlist Button for Guests -->
                                         <div v-else class="relative">
-                                            <button class="p-2 bg-white rounded-full shadow-md text-gray-400 cursor-default group-hover:opacity-0 transition-opacity">
+                                            <button class="p-2 bg-white rounded-full shadow-md text-gray-400 cursor-default transition-colors hover:text-green-500">
                                                 <svg xmlns="http://www.w3.org/2000/svg" 
                                                     class="h-6 w-6" 
                                                     fill="none" 
@@ -259,17 +259,6 @@ const toggleWishlist = (productId) => {
                                                         d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                                                 </svg>
                                             </button>
-                                            
-                                            <!-- Login Prompt (Shown on hover) -->
-                                            <div class="absolute z-10 right-0 transform translate-x-1/2 mt-2 px-2 w-48">
-                                                <div class="bg-white rounded-md shadow-lg ring-1 ring-black ring-opacity-5 p-2">
-                                                    <p class="text-sm text-gray-700 text-center">
-                                                        <Link :href="route('login')" class="text-blue-600 hover:underline">
-                                                            Sign in
-                                                        </Link> to add to wishlist
-                                                    </p>
-                                                </div>
-                                            </div>
                                         </div>
                                     </div>
                                 </div>

@@ -142,7 +142,7 @@
                     <InputLabel for="quantity" value="Quantity" required />
                     <TextInput
                       id="quantity"
-                      v-model.number="form.quantity"
+                      v-model="form.quantity"
                       type="number"
                       min="0"
                       class="mt-1 block w-full"
@@ -157,12 +157,13 @@
                     <InputLabel for="weight" value="Weight (kg)" />
                     <TextInput
                       id="weight"
-                      v-model.number="form.weight"
+                      v-model="form.weight"
                       type="number"
                       step="0.01"
                       min="0"
                       class="mt-1 block w-full"
                       :class="{ 'border-red-500': form.errors.weight }"
+                      placeholder="0.00"
                     />
                     <InputError :message="form.errors.weight" class="mt-2" />
                   </div>
@@ -306,13 +307,13 @@
                   </div>
                   <div class="col-span-2">
                     <InputLabel for="meta_description" value="Meta Description" />
-                    <Textarea
+                    <textarea
                       id="meta_description"
                       v-model="form.meta_description"
                       rows="3"
-                      class="mt-1 block w-full"
+                      class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                       :class="{ 'border-red-500': form.errors.meta_description }"
-                    />
+                    ></textarea>
                     <InputError :message="form.errors.meta_description" class="mt-2" />
                   </div>
                   <div class="col-span-2">
@@ -441,9 +442,13 @@ const submit = () => {
   const formData = new FormData();
   
   // Append all form data
-  Object.keys(form.data()).forEach(key => {
+  const data = form.data();
+  Object.keys(data).forEach(key => {
     if (key !== 'images' && key !== 'attributes') {
-      const value = form[key];
+      let value = data[key];
+      if (key === 'is_active' || key === 'is_featured') {
+        value = value ? 1 : 0;
+      }
       if (value !== null && value !== undefined) {
         formData.append(key, value);
       }

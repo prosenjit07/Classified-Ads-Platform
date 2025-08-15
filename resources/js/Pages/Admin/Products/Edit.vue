@@ -493,7 +493,10 @@ const submit = () => {
   const data = form.data();
   Object.keys(data).forEach((key) => {
     if (key !== 'images' && key !== 'attributes') {
-      const value = data[key];
+      let value = data[key];
+      if (key === 'is_active' || key === 'is_featured') {
+        value = value ? 1 : 0;
+      }
       if (value !== null && value !== undefined) {
         formData.append(key, value);
       }

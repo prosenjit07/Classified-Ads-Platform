@@ -4,6 +4,10 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\Admin\AdminController;
 use App\Http\Controllers\ProductController;
 use App\Http\Requests\ProductFilterRequest;
+use App\Http\Controllers\Admin\CategoryController;
+use App\Http\Controllers\Admin\BrandController;
+use App\Http\Controllers\User\DashboardController;
+use App\Http\Controllers\User\WishlistController;
 use App\Models\Brand;
 use App\Models\Category;
 use App\Models\Product;
@@ -78,9 +82,9 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::resource('categories', 'App\Http\Controllers\Admin\CategoryController')->except(['show']);
     
     // Additional routes for category fields
-    Route::post('categories/{category}/fields', [\App\Http\Controllers\Admin\CategoryController::class, 'storeField'])
+    Route::post('categories/{category}/fields', [CategoryController::class, 'storeField'])
         ->name('categories.fields.store');
-    Route::delete('categories/{category}/fields/{field}', [\App\Http\Controllers\Admin\CategoryController::class, 'destroyField'])
+    Route::delete('categories/{category}/fields/{field}', [CategoryController::class, 'destroyField'])
         ->name('categories.fields.destroy');
         
     // Brands Resource Routes
@@ -93,7 +97,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     // Products Resource Routes with Media
     Route::resource('products', 'App\\Http\\Controllers\\Admin\\ProductController');
     // Delete a single media item
-    Route::delete('products/{product}/media/{media}', [\App\Http\Controllers\Admin\ProductController::class, 'destroyMedia'])
+    Route::delete('products/{product}/media/{media}', [ProductController::class, 'destroyMedia'])
         ->name('products.media.destroy');
 });
 
@@ -101,7 +105,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
 // User routes
 Route::middleware(['auth'])->group(function () {
     // Dashboard
-    Route::get('/dashboard', [\App\Http\Controllers\User\DashboardController::class, 'index'])
+    Route::get('/dashboard', [DashboardController::class, 'index'])
         ->name('dashboard');
         
     // Profile
@@ -110,7 +114,7 @@ Route::middleware(['auth'])->group(function () {
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
     
     // Wishlist
-    Route::get('/wishlist', [\App\Http\Controllers\User\WishlistController::class, 'index'])
+    Route::get('/wishlist', [WishlistController::class, 'index'])
         ->name('wishlist.index');
     
     // Recently Viewed (if implemented)

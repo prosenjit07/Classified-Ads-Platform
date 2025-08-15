@@ -171,7 +171,7 @@ import {
   ShoppingBagIcon,
   UserCircleIcon,
   Cog6ToothIcon
-} from '@heroicons/vue/outline';
+} from '@heroicons/vue/24/outline';
 import ApplicationLogo from '@/Components/ApplicationLogo.vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 
