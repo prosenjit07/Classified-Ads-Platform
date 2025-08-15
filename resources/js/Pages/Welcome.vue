@@ -72,6 +72,18 @@ const formatPrice = (price) => {
     }).format(price);
 };
 
+// Reset filters
+const resetFilters = () => {
+    search.value = '';
+    category.value = '';
+    brand.value = '';
+    minPrice.value = '';
+    maxPrice.value = '';
+    condition.value = '';
+    sortBy.value = 'latest';
+    perPage.value = 12;
+};
+
 // Toggle wishlist
 const toggleWishlist = (productId) => {
     router.post(route('wishlist.toggle', productId), {}, {

@@ -23,12 +23,14 @@ class ProductFilterRequest extends FormRequest
     {
         return [
             'category_id' => ['nullable', 'integer', 'exists:categories,id'],
+            'category' => ['nullable', 'integer', 'exists:categories,id'], // Support both parameter names
             'brand_id' => ['nullable', 'integer', 'exists:brands,id'],
+            'brand' => ['nullable', 'integer', 'exists:brands,id'], // Support both parameter names
             'min_price' => ['nullable', 'numeric', 'min:0'],
             'max_price' => ['nullable', 'numeric', 'min:0', 'gt:min_price'],
             'condition' => ['nullable', 'string', 'in:new,used,refurbished'],
             'search' => ['nullable', 'string', 'max:255'],
-            'sort_by' => ['nullable', 'string', 'in:price_asc,price_desc,newest,oldest'],
+            'sort_by' => ['nullable', 'string', 'in:price_asc,price_desc,newest,oldest,latest,name_asc,name_desc'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ];
     }
