@@ -38,8 +38,7 @@ class RouteServiceProvider extends ServiceProvider
                 ->group(base_path('routes/web.php'));
         });
 
-        // Explicit route model binding for Category
-        Route::model('category', Category::class);
+        // No explicit route model binding needed - using Laravel's implicit binding
     }
 
     /**

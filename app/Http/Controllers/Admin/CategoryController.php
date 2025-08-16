@@ -2,9 +2,10 @@
 
 namespace App\Http\Controllers\Admin;
 
- use App\Http\Controllers\Controller;
- use App\Http\Requests\Admin\StoreCategoryRequest;
- use App\Http\Requests\Admin\UpdateCategoryRequest;
+use App\Http\Controllers\Controller;
+use Illuminate\Support\Facades\Log;
+use App\Http\Requests\Admin\StoreCategoryRequest;
+use App\Http\Requests\Admin\UpdateCategoryRequest;
 use App\Models\Category;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -139,22 +140,34 @@ class CategoryController extends Controller
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(Category $category)
+    public function edit($id)
     {
+        Log::info('Edit method called with ID: ' . $id);
+        Log::info('Request URL: ' . request()->fullUrl());
+        Log::info('Route Parameters: ', request()->route()->parameters());
         
-        $parentCategories = Category::where('id', '!=', $category->id)
-            ->where(function($query) use ($category) {
-                $query->whereNull('parent_id')
-                      ->orWhere('parent_id', '!=', $category->id);
-            })
-            ->orderBy('name')
-            ->get(['id', 'name', 'parent_id']);
+        try {
+            $category = Category::findOrFail($id);
+            Log::info('Found category:', $category->toArray());
+            
+            $parentCategories = Category::where('id', '!=', $category->id)
+                ->where(function($query) use ($category) {
+                    $query->whereNull('parent_id')
+                          ->orWhere('parent_id', '!=', $category->id);
+                })
+                ->orderBy('name')
+                ->get(['id', 'name', 'parent_id']);
 
-        return Inertia::render('Admin/Categories/Edit', [
-            'category' => $category,
-            'parentCategories' => $parentCategories,
-            'fieldTypes' => $this->getFieldTypes(),
-        ]);
+            return Inertia::render('Admin/Categories/Edit', [
+                'category' => $category,
+                'parentCategories' => $parentCategories,
+                'fieldTypes' => $this->getFieldTypes(),
+            ]);
+        } catch (\Exception $e) {
+            Log::error('Error in edit method: ' . $e->getMessage());
+            Log::error($e->getTraceAsString());
+            abort(404, 'Category not found');
+        }
     }
 
     /**
@@ -227,14 +240,12 @@ class CategoryController extends Controller
             ['value' => 'text', 'label' => 'Text'],
             ['value' => 'number', 'label' => 'Number'],
             ['value' => 'email', 'label' => 'Email'],
-            ['value' => 'url', 'label' => 'URL'],
-            ['value' => 'tel', 'label' => 'Phone'],
             ['value' => 'date', 'label' => 'Date'],
-            ['value' => 'datetime-local', 'label' => 'Date & Time'],
             ['value' => 'select', 'label' => 'Dropdown'],
             ['value' => 'checkbox', 'label' => 'Checkbox'],
             ['value' => 'radio', 'label' => 'Radio Buttons'],
             ['value' => 'textarea', 'label' => 'Text Area'],
+            ['value' => 'file', 'label' => 'File'],
         ];
     }
 

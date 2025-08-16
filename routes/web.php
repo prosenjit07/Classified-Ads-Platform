@@ -79,7 +79,20 @@ Route::prefix('admin')->name('admin.')->middleware(['auth', 'admin'])->group(fun
     Route::get('/dashboard', [AdminController::class, 'dashboard'])->name('dashboard');
     
     // Categories Resource Routes
-    Route::resource('categories', 'App\Http\Controllers\Admin\CategoryController')->except(['show']);
+    Route::get('categories', [\App\Http\Controllers\Admin\CategoryController::class, 'index'])->name('categories.index');
+    Route::get('categories/create', [\App\Http\Controllers\Admin\CategoryController::class, 'create'])->name('categories.create');
+    Route::post('categories', [\App\Http\Controllers\Admin\CategoryController::class, 'store'])->name('categories.store');
+    
+    // Explicit routes using ID for admin panel
+    Route::get('categories/{id}/edit', [\App\Http\Controllers\Admin\CategoryController::class, 'edit'])
+        ->name('categories.edit')
+        ->where('id', '[0-9]+');
+    Route::put('categories/{id}', [\App\Http\Controllers\Admin\CategoryController::class, 'update'])
+        ->name('categories.update')
+        ->where('id', '[0-9]+');
+    Route::delete('categories/{id}', [\App\Http\Controllers\Admin\CategoryController::class, 'destroy'])
+        ->name('categories.destroy')
+        ->where('id', '[0-9]+');
     
     // Additional routes for category fields
     Route::post('categories/{category}/fields', [CategoryController::class, 'storeField'])

@@ -40,8 +40,14 @@ const generateSlug = () => {
 };
 
 const submit = () => {
-    form.put(route('admin.categories.update', props.category.id), {
+    form.put(route('admin.categories.update', { id: props.category.id }), {
         preserveScroll: true,
+        onError: (errors) => {
+            console.error('Update error:', errors);
+        },
+        onSuccess: () => {
+            console.log('Category updated successfully');
+        }
     });
 };
 
