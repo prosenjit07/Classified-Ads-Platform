@@ -23,6 +23,53 @@
               <div class="mb-8">
                 <h3 class="text-lg font-medium text-gray-900 mb-4">Basic Information</h3>
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    <!-- Category -->
+                  <div>
+                    <InputLabel for="category_id" value="Category" required />
+                    <select
+                      id="category_id"
+                      v-model="form.category_id"
+                      class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                      :class="{ 'border-red-500': form.errors.category_id }"
+                      required
+                    >
+                      <option value="">Select a category</option>
+                      <option 
+                        v-for="category in categories" 
+                        :key="category.id" 
+                        :value="category.id"
+                      >
+                        {{ category.name }}
+                      </option>
+                    </select>
+                    <InputError :message="form.errors.category_id" class="mt-2" />
+                  </div>
+
+
+
+                  <!-- Brand -->
+                  <div>
+                    <InputLabel for="brand_id" value="Brand" />
+                    <select
+                      id="brand_id"
+                      v-model="form.brand_id"
+                      class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
+                      :class="{ 'border-red-500': form.errors.brand_id }"
+                    >
+                      <option value="">Select a brand</option>
+                      <option 
+                        v-for="brand in brands" 
+                        :key="brand.id" 
+                        :value="brand.id"
+                      >
+                        {{ brand.name }}
+                      </option>
+                    </select>
+                    <InputError :message="form.errors.brand_id" class="mt-2" />
+                  </div>
+
+
                   <!-- Name -->
                   <div class="col-span-2">
                     <InputLabel for="name" value="Product Name" required />
@@ -51,48 +98,6 @@
                     <InputError :message="form.errors.sku" class="mt-2" />
                   </div>
 
-                  <!-- Category -->
-                  <div>
-                    <InputLabel for="category_id" value="Category" required />
-                    <select
-                      id="category_id"
-                      v-model="form.category_id"
-                      class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
-                      :class="{ 'border-red-500': form.errors.category_id }"
-                      required
-                    >
-                      <option value="">Select a category</option>
-                      <option 
-                        v-for="category in categories" 
-                        :key="category.id" 
-                        :value="category.id"
-                      >
-                        {{ category.name }}
-                      </option>
-                    </select>
-                    <InputError :message="form.errors.category_id" class="mt-2" />
-                  </div>
-
-                  <!-- Brand -->
-                  <div>
-                    <InputLabel for="brand_id" value="Brand" />
-                    <select
-                      id="brand_id"
-                      v-model="form.brand_id"
-                      class="mt-1 block w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm"
-                      :class="{ 'border-red-500': form.errors.brand_id }"
-                    >
-                      <option value="">Select a brand</option>
-                      <option 
-                        v-for="brand in brands" 
-                        :key="brand.id" 
-                        :value="brand.id"
-                      >
-                        {{ brand.name }}
-                      </option>
-                    </select>
-                    <InputError :message="form.errors.brand_id" class="mt-2" />
-                  </div>
 
                   <!-- Price -->
                   <div>

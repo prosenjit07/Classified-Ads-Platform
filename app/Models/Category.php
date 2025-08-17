@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Str;
 
 class Category extends Model
 {
@@ -139,5 +140,34 @@ class Category extends Model
     public function getRouteKeyName()
     {
         return 'slug';
+    }
+
+    /**
+     * Boot the model.
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::saving(function ($category) {
+            $category->slug = $category->generateSlug();
+        });
+    }
+
+    /**
+     * Generate a URL-friendly slug from the category name.
+     *
+     * @return string
+     */
+    protected function generateSlug()
+    {
+        $slug = Str::slug($this->name);
+        
+        // Check if slug already exists for other categories
+        $count = static::where('slug', 'LIKE', "{$slug}%")
+            ->where('id', '!=', $this->id ?? 0)
+            ->count();
+            
+        return $count ? "{$slug}-{$count}" : $slug;
     }
 }

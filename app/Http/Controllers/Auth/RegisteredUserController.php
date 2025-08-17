@@ -4,20 +4,32 @@ namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Services\UserService;
 use Illuminate\Auth\Events\Registered;
- use Illuminate\Http\RedirectResponse;
- use Illuminate\Http\Request;
- use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\Rules;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Inertia\Response;
- use App\Http\Requests\Auth\RegisterRequest;
- use Illuminate\Support\Facades\Mail;
- use App\Mail\WelcomeMail;
+use App\Http\Requests\Auth\RegisterRequest;
 
 class RegisteredUserController extends Controller
 {
+    /**
+     * @var UserService
+     */
+    protected $userService;
+
+    /**
+     * Create a new controller instance.
+     *
+     * @param UserService $userService
+     */
+    public function __construct(UserService $userService)
+    {
+        $this->userService = $userService;
+    }
+
     /**
      * Display the registration view.
      */
@@ -35,21 +47,16 @@ class RegisteredUserController extends Controller
     {
         $validated = $request->validated();
 
-        $user = User::create([
-            'name' => $validated['name'],
-            'email' => $validated['email'],
-            'password' => Hash::make($validated['password']),
-        ]);
-
+        // Create user
+        $user = $this->userService->createUser($validated);
+        
+        // Fire registered event
         event(new Registered($user));
-
+        
         // Send welcome email
-        try {
-            Mail::to($user->email)->send(new WelcomeMail($user));
-        } catch (\Throwable $e) {
-            // Fail silently to not block registration
-        }
-
+        $this->userService->sendWelcomeEmail($user);
+        
+        // Log the user in
         Auth::login($user);
 
         return redirect(route('welcome', absolute: false));

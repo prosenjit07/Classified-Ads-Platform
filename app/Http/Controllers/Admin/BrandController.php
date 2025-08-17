@@ -2,29 +2,45 @@
 
 namespace App\Http\Controllers\Admin;
 
- use App\Http\Controllers\Controller;
- use App\Http\Requests\Admin\StoreBrandRequest;
- use App\Http\Requests\Admin\UpdateBrandRequest;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Admin\StoreBrandRequest;
+use App\Http\Requests\Admin\UpdateBrandRequest;
 use App\Models\Brand;
+use App\Services\BrandService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Inertia\Inertia;
 
 class BrandController extends Controller
 {
     /**
-     * Display a listing of the resource.
+     * @var BrandService
      */
-    public function index()
+    protected $brandService;
+
+    /**
+     * Create a new controller instance.
+     *
+     * @param BrandService $brandService
+     * @return void
+     */
+    public function __construct(BrandService $brandService)
     {
-        $brands = Brand::latest()
-            ->withCount('products')
-            ->paginate(10);
+        $this->brandService = $brandService;
+    }
+
+    /**
+     * Display a listing of the resource.
+     *
+     * @param Request $request
+     * @return \Inertia\Response
+     */
+    public function index(Request $request)
+    {
+        $brands = $this->brandService->getBrands($request->all());
 
         return Inertia::render('Admin/Brands/Index', [
             'brands' => $brands,
-            'filters' => request()->all('search'),
+            'filters' => $request->all('search'),
         ]);
     }
 
@@ -38,24 +54,24 @@ class BrandController extends Controller
 
     /**
      * Store a newly created resource in storage.
+     *
+     * @param StoreBrandRequest $request
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function store(StoreBrandRequest $request)
     {
-        $validated = $request->validated();
+        try {
+            $this->brandService->createBrand(
+                $request->validated(),
+                $request->file('logo')
+            );
 
-        // Generate slug from name if not provided
-        $validated['slug'] = Str::slug($validated['name']);
-
-        // Handle file upload
-        if ($request->hasFile('logo')) {
-            $path = $request->file('logo')->store('brands', 'public');
-            $validated['logo'] = $path;
+            return redirect()->route('admin.brands.index')
+                ->with('success', 'Brand created successfully.');
+        } catch (\Exception $e) {
+            return back()->withInput()
+                ->with('error', 'Error creating brand: ' . $e->getMessage());
         }
-
-        Brand::create($validated);
-
-        return redirect()->route('admin.brands.index')
-            ->with('success', 'Brand created successfully.');
     }
 
     /**
@@ -82,55 +98,44 @@ class BrandController extends Controller
 
     /**
      * Update the specified resource in storage.
+     *
+     * @param UpdateBrandRequest $request
+     * @param Brand $brand
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function update(UpdateBrandRequest $request, Brand $brand)
     {
-        $validated = $request->validated();
+        try {
+            $this->brandService->updateBrand(
+                $brand,
+                $request->validated(),
+                $request->file('logo'),
+                (bool) $request->input('delete_logo')
+            );
 
-        // Handle logo deletion if requested
-        if ($request->input('delete_logo') && $brand->logo) {
-            Storage::disk('public')->delete($brand->logo);
-            $validated['logo'] = null;
+            return redirect()->route('admin.brands.index')
+                ->with('success', 'Brand updated successfully.');
+        } catch (\Exception $e) {
+            return back()->withInput()
+                ->with('error', 'Error updating brand: ' . $e->getMessage());
         }
-        // Handle new file upload
-        elseif ($request->hasFile('logo')) {
-            // Delete old logo if exists
-            if ($brand->logo) {
-                Storage::disk('public')->delete($brand->logo);
-            }
-            
-            $path = $request->file('logo')->store('brands', 'public');
-            $validated['logo'] = $path;
-        }
-        // If no logo in request, keep the existing one
-        else {
-            unset($validated['logo']);
-        }
-
-        $brand->update($validated);
-
-        return redirect()->route('admin.brands.index')
-            ->with('success', 'Brand updated successfully.');
     }
 
     /**
      * Remove the specified resource from storage.
+     *
+     * @param Brand $brand
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function destroy(Brand $brand)
     {
-        // Prevent deletion if brand has products
-        if ($brand->products()->exists()) {
-            return back()->with('error', 'Cannot delete brand with associated products.');
+        try {
+            $this->brandService->deleteBrand($brand);
+            
+            return redirect()->route('admin.brands.index')
+                ->with('success', 'Brand deleted successfully.');
+        } catch (\Exception $e) {
+            return back()->with('error', $e->getMessage());
         }
-
-        // Delete logo if exists
-        if ($brand->logo) {
-            Storage::disk('public')->delete($brand->logo);
-        }
-
-        $brand->delete();
-
-        return redirect()->route('admin.brands.index')
-            ->with('success', 'Brand deleted successfully.');
     }
 }

@@ -205,19 +205,17 @@ class CategoryService
     public function getFieldTypes()
     {
         return [
-            'text' => 'Text',
-            'textarea' => 'Text Area',
-            'number' => 'Number',
-            'email' => 'Email',
-            'url' => 'URL',
-            'select' => 'Dropdown',
-            'checkbox' => 'Checkbox',
-            'radio' => 'Radio Button',
-            'date' => 'Date',
-            'time' => 'Time',
-            'datetime' => 'Date & Time',
-            'file' => 'File Upload',
-            'image' => 'Image Upload',
+            ['value' => 'text', 'label' => 'Text'],
+            ['value' => 'textarea', 'label' => 'Text Area'],
+            ['value' => 'number', 'label' => 'Number'],
+            ['value' => 'email', 'label' => 'Email'],
+            ['value' => 'select', 'label' => 'Dropdown'],
+            ['value' => 'checkbox', 'label' => 'Checkbox'],
+            ['value' => 'radio', 'label' => 'Radio Button'],
+            ['value' => 'time', 'label' => 'Time'],
+            ['value' => 'datetime', 'label' => 'Date & Time'],
+            ['value' => 'file', 'label' => 'File Upload'],
+            ['value' => 'image', 'label' => 'Image Upload'],
         ];
     }
 }

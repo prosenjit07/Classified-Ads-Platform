@@ -10,7 +10,6 @@ const props = defineProps({
 
 const form = useForm({
     name: '',
-    slug: '',
     parent_id: null,
     description: '',
     status: true,
@@ -28,15 +27,6 @@ const newField = ref({
     options: '',
 });
 
-const generateSlug = () => {
-    if (!form.name) return;
-    form.slug = form.name.toLowerCase()
-        .replace(/\s+/g, '-')
-        .replace(/[^\w-]+/g, '')
-        .replace(/--+/g, '-')
-        .replace(/^-+/, '')
-        .replace(/-+$/, '');
-};
 
 const submit = () => {
     form.post(route('admin.categories.store'), {
@@ -107,7 +97,6 @@ const removeField = (index) => {
                                         <input
                                             type="text"
                                             v-model="form.name"
-                                            @input="generateSlug"
                                             class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
                                             required
                                         />
@@ -116,21 +105,6 @@ const removeField = (index) => {
                                         </p>
                                     </div>
 
-                                    <!-- Slug -->
-                                    <div>
-                                        <label class="block text-sm font-medium text-gray-700">
-                                            Slug <span class="text-red-500">*</span>
-                                        </label>
-                                        <input
-                                            type="text"
-                                            v-model="form.slug"
-                                            class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
-                                            required
-                                        />
-                                        <p class="mt-1 text-sm text-gray-500">
-                                            The "slug" is the URL-friendly version of the name.
-                                        </p>
-                                    </div>
 
                                     <!-- Parent Category -->
                                     <div>

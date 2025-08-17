@@ -61,9 +61,9 @@ class User extends Authenticatable
      * 
      * @return \Illuminate\Database\Eloquent\Relations\HasMany
      */
-    public function wishlist(): HasMany
+    public function wishlist()
     {
-        return $this->hasMany(Wishlist::class)
+        return $this->hasMany(Wishlist::class, 'user_id')
             ->orderBy('priority', 'desc')
             ->orderBy('created_at', 'desc');
     }

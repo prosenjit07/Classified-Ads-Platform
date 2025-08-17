@@ -3,76 +3,79 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Services\ProductService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Inertia\Inertia;
 
 class ProductController extends Controller
 {
     /**
+     * @var ProductService
+     */
+    protected $productService;
+
+    /**
+     * Create a new controller instance.
+     *
+     * @param ProductService $productService
+     * @return void
+     */
+    public function __construct(ProductService $productService)
+    {
+        $this->productService = $productService;
+    }
+
+    /**
+     * Display a listing of products with optional filters.
+     *
+     * @param  \Illuminate\Http\Request  $request
+     * @return \Inertia\Response
+     */
+    public function index(Request $request)
+    {
+        $products = $this->productService->getFilteredProducts($request->all());
+
+        return Inertia::render('Products/Index', [
+            'products' => $products,
+            'filters' => $request->all(['search', 'category', 'brand', 'sort', 'order'])
+        ]);
+    }
+
+    /**
      * Display the specified product.
      *
      * @param  string  $slug
-     * @return \Inertia\Response
+     * @return \Inertia\Response|\Illuminate\Http\Response
      */
     public function show($slug)
     {
         try {
-            $product = Product::with(['category', 'brand', 'media', 'details'])
-                ->where('slug', $slug)
-                ->firstOrFail();
-
-            // Check if product is in user's wishlist
-            $product->is_in_wishlist = false;
-            if (Auth::check()) {
-                $product->is_in_wishlist = Auth::user()->wishlist()
-                    ->where('product_id', $product->id)
-                    ->exists();
-            }
-
-            // Format price for display (price stored as decimal 10,2)
-            $product->formatted_price = number_format((float) $product->price, 2);
-            if ($product->sale_price) {
-                $product->formatted_sale_price = number_format((float) $product->sale_price, 2);
-            }
-
-            // Get related products (same category, excluding current product)
-            $relatedProductsQuery = Product::with(['media'])
-                ->where('id', '!=', $product->id);
-                
-            if ($product->category_id) {
-                $relatedProductsQuery->where('category_id', $product->category_id);
-            }
-                
-            $relatedProducts = $relatedProductsQuery->inRandomOrder()
-                ->limit(4)
-                ->get()
-                ->map(function ($item) {
-                    $item->formatted_price = number_format((float) $item->price, 2);
-                    if ($item->sale_price) {
-                        $item->formatted_sale_price = number_format((float) $item->sale_price, 2);
-                    }
-                    return $item;
-                });
-
-            return Inertia::render('Products/Show', [
-                'product' => $product,
-                'relatedProducts' => $relatedProducts
-            ]);
-
-        } catch (\Exception $e) {
-            // Log the error for debugging
-            Log::error('ProductController@show error: ' . $e->getMessage());
+            $data = $this->productService->getProductBySlug($slug);
             
-            // Return a 404 response for any errors
+            return Inertia::render('Products/Show', [
+                'product' => $data['product'],
+                'relatedProducts' => $data['relatedProducts']
+            ]);
+        } catch (\Exception $e) {
+            Log::error('ProductController@show error: ' . $e->getMessage());
             return response()->view('errors.404', [], 404);
         }
     }
 
-    // Other methods can be kept as is or removed if not needed
-    public function index() {}
-    public function store(Request $request) {}
-    public function update(Request $request, string $id) {}
-    public function destroy(string $id) {}
+    /**
+     * Get featured products
+     *
+     * @return \Illuminate\Http\JsonResponse
+     */
+    public function featured()
+    {
+        try {
+            $products = $this->productService->getFeaturedProducts(8);
+            return response()->json($products);
+        } catch (\Exception $e) {
+            Log::error('ProductController@featured error: ' . $e->getMessage());
+            return response()->json(['error' => 'Unable to load featured products'], 500);
+        }
+    }
 }

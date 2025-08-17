@@ -11,7 +11,6 @@ const props = defineProps({
 
 const form = useForm({
     name: props.category.name,
-    slug: props.category.slug,
     parent_id: props.category.parent_id,
     description: props.category.description,
     status: props.category.status,
@@ -29,15 +28,6 @@ const newField = ref({
     options: '',
 });
 
-const generateSlug = () => {
-    if (!form.name) return;
-    form.slug = form.name.toLowerCase()
-        .replace(/\s+/g, '-')
-        .replace(/[^\w-]+/g, '')
-        .replace(/--+/g, '-')
-        .replace(/^-+/, '')
-        .replace(/-+$/, '');
-};
 
 const submit = () => {
     form.put(route('admin.categories.update', { id: props.category.id }), {
@@ -97,14 +87,9 @@ const removeField = (index) => {
                                     <!-- Name -->
                                     <div>
                                         <label>Name <span class="text-red-500">*</span></label>
-                                        <input type="text" v-model="form.name" @input="generateSlug" required />
+                                        <input type="text" v-model="form.name" required />
                                     </div>
 
-                                    <!-- Slug -->
-                                    <div>
-                                        <label>Slug <span class="text-red-500">*</span></label>
-                                        <input type="text" v-model="form.slug" required />
-                                    </div>
 
                                     <!-- Parent Category -->
                                     <div>

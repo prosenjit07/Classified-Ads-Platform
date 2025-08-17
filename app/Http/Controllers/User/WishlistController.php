@@ -3,26 +3,38 @@
 namespace App\Http\Controllers\User;
 
 use App\Http\Controllers\Controller;
-use App\Models\Wishlist;
-use Illuminate\Http\Request;
+use App\Services\WishlistService;
 use Inertia\Inertia;
+use Inertia\Response;
 use Illuminate\Support\Facades\Auth;
 
 class WishlistController extends Controller
 {
     /**
+     * @var WishlistService
+     */
+    protected $wishlistService;
+
+    /**
+     * Create a new controller instance.
+     *
+     * @param WishlistService $wishlistService
+     */
+    public function __construct(WishlistService $wishlistService)
+    {
+        $this->wishlistService = $wishlistService;
+    }
+
+    /**
      * Display the user's wishlist.
      *
-     * @return \Inertia\Response
+     * @return Response
      */
-    public function index()
+    public function index(): Response
     {
         $user = Auth::user();
         
-        $wishlistItems = Wishlist::where('user_id', $user->id)
-            ->with(['product.category', 'product.brand', 'product.media'])
-            ->latest()
-            ->paginate(12);
+        $wishlistItems = $this->wishlistService->getUserWishlist($user);
             
         return Inertia::render('User/Wishlist/Index', [
             'wishlistItems' => $wishlistItems
