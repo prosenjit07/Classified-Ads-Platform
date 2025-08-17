@@ -3,84 +3,48 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\Log;
 use App\Http\Requests\Admin\StoreCategoryRequest;
 use App\Http\Requests\Admin\UpdateCategoryRequest;
 use App\Models\Category;
-use Illuminate\Http\Request;
-use Illuminate\Support\Str;
+use App\Services\CategoryService;
 use Inertia\Inertia;
-use Illuminate\Support\Facades\DB;
 
 class CategoryController extends Controller
 {
     /**
+     * @var CategoryService
+     */
+    protected $categoryService;
+
+    /**
+     * Create a new controller instance.
+     *
+     * @param CategoryService $categoryService
+     * @return void
+     */
+    public function __construct(CategoryService $categoryService)
+    {
+        $this->categoryService = $categoryService;
+    }
+
+    /**
      * Display a listing of the resource.
+     *
+     * @return \Inertia\Response
      */
     public function index()
     {
-        // Get all categories with parent relationship
-        $categories = Category::with('parent')
-            ->orderBy('parent_id')
-            ->orderBy('order')
-            ->get()
-            ->map(function ($category) {
-                return [
-                    'id' => $category->id,
-                    'name' => $category->name,
-                    'slug' => $category->slug,
-                    'parent_id' => $category->parent_id,
-                    'status' => $category->status,
-                    'order' => $category->order,
-                    'description' => $category->description,
-                    'meta_title' => $category->meta_title,
-                    'meta_description' => $category->meta_description,
-                    'created_at' => $category->created_at,
-                    'updated_at' => $category->updated_at,
-                    'parent' => $category->parent,
-                    'form_fields' => $category->form_fields,
-                    'children' => [] // Initialize children array
-                ];
-            })
-            ->toArray();
+        $categories = $this->categoryService->getAllCategories();
 
-        // Build the tree structure
-        $tree = [];
-        $itemsByReference = [];
-
-        // First pass: build the array with references
-        foreach ($categories as $key => &$category) {
-            $itemsByReference[$category['id']] = &$category;
-            $itemsByReference[$category['id']]['children'] = [];
-        }
-        unset($category); // Break the reference with the last element
-
-        // Second pass: build the tree
-        $flatTree = [];
-        foreach ($categories as $key => &$category) {
-            $parentId = $category['parent_id'];
-            if ($parentId && isset($itemsByReference[$parentId])) {
-                $itemsByReference[$parentId]['children'][] = &$itemsByReference[$category['id']];
-            } else {
-                $flatTree[] = &$itemsByReference[$category['id']];
-            }
-        }
-
-        // For AJAX requests, return JSON
-        if (request()->expectsJson()) {
-            return response()->json([
-                'categories' => $flatTree
-            ]);
-        }
-
-        // For regular requests, return Inertia response
         return Inertia::render('Admin/Categories/Index', [
-            'categories' => $flatTree,
+            'categories' => $categories,
         ]);
     }
 
     /**
      * Show the form for creating a new resource.
+     *
+     * @return \Inertia\Response
      */
     public function create()
     {
@@ -90,191 +54,100 @@ class CategoryController extends Controller
 
         return Inertia::render('Admin/Categories/Create', [
             'parentCategories' => $parentCategories,
-            'fieldTypes' => $this->getFieldTypes(),
+            'fieldTypes' => $this->categoryService->getFieldTypes(),
         ]);
     }
 
     /**
      * Store a newly created resource in storage.
+     *
+     * @param StoreCategoryRequest $request
+     * @return \Illuminate\Http\RedirectResponse
      */
     public function store(StoreCategoryRequest $request)
     {
-        $validated = $request->validated();
-
-        // Generate slug from name if not provided
-        $validated['slug'] = Str::slug($request->input('slug') ?: $request->name);
-
-        // Handle form fields
-        if (isset($validated['form_fields'])) {
-            $validated['form_fields'] = $this->processFormFields($validated['form_fields']);
-        }
-
         try {
-            DB::beginTransaction();
+            $this->categoryService->createCategory($request->validated());
             
-            $category = Category::create($validated);
-            
-            DB::commit();
-            
-            return to_route('admin.categories.index')
+            return redirect()->route('admin.categories.index')
                 ->with('success', 'Category created successfully.');
-                
         } catch (\Exception $e) {
-            DB::rollBack();
-            return back()
-                ->withInput()
-                ->withErrors(['error' => 'Error creating category: ' . $e->getMessage()]);
+            return back()->withInput()
+                ->with('error', 'Error creating category: ' . $e->getMessage());
         }
     }
 
     /**
      * Display the specified resource.
+     *
+     * @param  int  $id
+     * @return \Inertia\Response
      */
-    public function show(Category $category)
+    public function show($id)
     {
+        $category = Category::with(['parent', 'children'])->findOrFail($id);
+        
         return Inertia::render('Admin/Categories/Show', [
-            'category' => $category->load('parent', 'children')
+            'category' => $category,
         ]);
     }
 
     /**
      * Show the form for editing the specified resource.
+     *
+     * @param int $id
+     * @return \Inertia\Response
      */
     public function edit($id)
     {
-        Log::info('Edit method called with ID: ' . $id);
-        Log::info('Request URL: ' . request()->fullUrl());
-        Log::info('Route Parameters: ', request()->route()->parameters());
-        
         try {
-            $category = Category::findOrFail($id);
-            Log::info('Found category:', $category->toArray());
+            $data = $this->categoryService->getCategoryForEdit($id);
             
-            $parentCategories = Category::where('id', '!=', $category->id)
-                ->where(function($query) use ($category) {
-                    $query->whereNull('parent_id')
-                          ->orWhere('parent_id', '!=', $category->id);
-                })
-                ->orderBy('name')
-                ->get(['id', 'name', 'parent_id']);
-
             return Inertia::render('Admin/Categories/Edit', [
-                'category' => $category,
-                'parentCategories' => $parentCategories,
-                'fieldTypes' => $this->getFieldTypes(),
+                'category' => $data['category'],
+                'parentCategories' => $data['parentCategories'],
+                'fieldTypes' => $this->categoryService->getFieldTypes(),
             ]);
         } catch (\Exception $e) {
-            Log::error('Error in edit method: ' . $e->getMessage());
-            Log::error($e->getTraceAsString());
             abort(404, 'Category not found');
         }
     }
 
     /**
      * Update the specified resource in storage.
+     *
+     * @param UpdateCategoryRequest $request
+     * @param int $id
+     * @return \Illuminate\Http\RedirectResponse
      */
-    public function update(UpdateCategoryRequest $request, Category $category)
+    public function update(UpdateCategoryRequest $request, $id)
     {
-        $validated = $request->validated();
-
-        // Generate slug from name if not provided
-        $validated['slug'] = Str::slug($request->input('slug') ?: $request->name);
-
-        // Handle form fields
-        if (isset($validated['form_fields'])) {
-            $validated['form_fields'] = $this->processFormFields($validated['form_fields']);
-        }
-
         try {
-            DB::beginTransaction();
-            
-            $category->update($validated);
-            
-            DB::commit();
+            $this->categoryService->updateCategory($id, $request->validated());
             
             return to_route('admin.categories.index')
                 ->with('success', 'Category updated successfully.');
-                
         } catch (\Exception $e) {
-            DB::rollBack();
-            return back()->with('error', 'Error updating category: ' . $e->getMessage());
+            return back()->withInput()
+                ->with('error', 'Error updating category: ' . $e->getMessage());
         }
     }
 
     /**
      * Remove the specified resource from storage.
+     *
+     * @param int $id
+     * @return \Illuminate\Http\RedirectResponse
      */
-    public function destroy(Category $category)
+    public function destroy($id)
     {
-        
-        // Prevent deletion if category has children
-        if ($category->children()->exists()) {
-            return back()->with('error', 'Cannot delete category with subcategories.');
-        }
-
         try {
-            DB::beginTransaction();
+            $this->categoryService->deleteCategory($id);
             
-            $category->delete();
-            
-            DB::commit();
-            
-            return redirect()
-                ->route('admin.categories.index')
+            return redirect()->route('admin.categories.index')
                 ->with('success', 'Category deleted successfully.');
-                
         } catch (\Exception $e) {
-            DB::rollBack();
             return back()->with('error', 'Error deleting category: ' . $e->getMessage());
         }
-    }
-
-    /**
-     * Get the available field types for dynamic form fields.
-     *
-     * @return array
-     */
-    protected function getFieldTypes(): array
-    {
-        return [
-            ['value' => 'text', 'label' => 'Text'],
-            ['value' => 'number', 'label' => 'Number'],
-            ['value' => 'email', 'label' => 'Email'],
-            ['value' => 'date', 'label' => 'Date'],
-            ['value' => 'select', 'label' => 'Dropdown'],
-            ['value' => 'checkbox', 'label' => 'Checkbox'],
-            ['value' => 'radio', 'label' => 'Radio Buttons'],
-            ['value' => 'textarea', 'label' => 'Text Area'],
-            ['value' => 'file', 'label' => 'File'],
-        ];
-    }
-
-    /**
-     * Process and validate form fields before saving.
-     *
-     * @param array $fields
-     * @return array
-     */
-    protected function processFormFields(array $fields): array
-    {
-        $processed = [];
-        
-        foreach ($fields as $field) {
-            if (empty($field['label']) || empty($field['name'])) {
-                continue;
-            }
-            
-            $processed[] = [
-                'label' => $field['label'],
-                'name' => $field['name'],
-                'type' => $field['type'] ?? 'text',
-                'required' => $field['required'] ?? false,
-                'options' => $field['options'] ?? [],
-                'placeholder' => $field['placeholder'] ?? '',
-                'validation' => $field['validation'] ?? null,
-            ];
-        }
-        
-        return $processed;
     }
 }
